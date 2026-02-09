@@ -50,7 +50,7 @@ def parse_request_body(body: dict) -> ChatCompletionRequest:
     )
 
 
-@router.post("/completions")
+@router.post("/completions", response_model=None)
 async def chat_completions(
     body: dict,
     user_id: str = Header(None),

@@ -35,6 +35,10 @@ class DatabaseManager:
             msg = "DATABASE_URL not configured"
             raise ValueError(msg)
 
+        # 确保使用 asyncpg 驱动
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
         self._engine = create_async_engine(
             url,
             echo=os.getenv("DATABASE_ECHO", "false").lower() == "true",
