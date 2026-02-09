@@ -7,13 +7,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.v1.chat import router as chat_router
 from app.core.config import Config, ConfigurationError, get_config
+from app.core.personalities import PersonalityLoader, PersonalityRegistry, initialize_personality_registry
+from app.engines.registry import engine_registry
 from app.middleware import (
     ErrorHandlerMiddleware,
     RateLimitMiddleware,
     RequestContextMiddleware,
 )
 from app.observability import configure_logging, get_logger
+from app.orchestration import initialize_orchestrator
 from app.storage.database import db_manager
 
 # Initialize configuration
@@ -39,11 +43,29 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
     logger.info("Starting CozyEngine...")
+    
+    # Initialize database
     db_manager.initialize()
     logger.info("Database connection pool initialized")
+    
+    # Initialize personality registry
+    personality_registry = initialize_personality_registry()
+    logger.info("Personality registry initialized")
+    
+    # Initialize orchestrator
+    orchestrator = await initialize_orchestrator(personality_registry, engine_registry)
+    logger.info("ChatOrchestrator initialized")
+    
     yield
+    
     # Shutdown
     logger.info("Shutting down CozyEngine...")
+    
+    # Close all engines
+    await engine_registry.close_all()
+    logger.info("All engines closed")
+    
+    # Close database
     await db_manager.close()
     logger.info("Database connection pool closed")
 
@@ -80,6 +102,7 @@ if config.app.cors.enabled:
 
 # Register routers
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api")
 
 
 @app.get("/")
