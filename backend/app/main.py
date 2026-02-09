@@ -1,17 +1,20 @@
 """FastAPI application entry point."""
 
 import json
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.health import router as health_router
 from app.core.config import Config, ConfigurationError, get_config
 from app.middleware import (
     ErrorHandlerMiddleware,
-    RequestContextMiddleware,
     RateLimitMiddleware,
+    RequestContextMiddleware,
 )
 from app.observability import configure_logging, get_logger
+from app.storage.database import db_manager
 
 # Initialize configuration
 try:
@@ -30,6 +33,21 @@ except ConfigurationError as e:
 configure_logging(log_level=config.app.log_level if hasattr(config.app, "log_level") else "INFO")
 logger = get_logger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events"""
+    # Startup
+    logger.info("Starting CozyEngine...")
+    db_manager.initialize()
+    logger.info("Database connection pool initialized")
+    yield
+    # Shutdown
+    logger.info("Shutting down CozyEngine...")
+    await db_manager.close()
+    logger.info("Database connection pool closed")
+
+
 app = FastAPI(
     title=config.app.name,
     description=config.app.description,
@@ -37,6 +55,7 @@ app = FastAPI(
     debug=config.app.debug,
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Add middleware stack (order matters - first added = outermost)
@@ -59,6 +78,9 @@ if config.app.cors.enabled:
         allow_headers=config.app.cors.allow_headers,
     )
 
+# Register routers
+app.include_router(health_router, prefix="/api/v1")
+
 
 @app.get("/")
 async def root():
@@ -71,13 +93,6 @@ async def root():
         "environment": config.environment,
         "status": "operational",
     }
-
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    logger.debug("Health check endpoint accessed")
-    return {"status": "healthy"}
 
 
 @app.get("/config")
