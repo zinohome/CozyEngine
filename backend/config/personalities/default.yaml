@@ -1,0 +1,26 @@
+id: default
+name: Default Assistant
+description: A helpful and friendly AI assistant
+system_prompt: |
+  You are a helpful, harmless, and honest AI assistant.
+  Always provide accurate and useful information.
+  Be concise and clear in your responses.
+
+ai:
+  provider: openai
+  model: gpt-4
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 1.0
+
+tools:
+  enabled: false
+  allowed_tools: []
+
+memory:
+  enabled: true
+  recall_top_k: 5
+
+metadata:
+  version: "1.0"
+  author: "CozyEngine Team"
