@@ -1,0 +1,27 @@
+# API Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+api:
+  # Route prefix
+  v1_prefix: "/v1"
+  
+  # OpenAI compatibility
+  openai_compatible: true
+  
+  # SSE (Server-Sent Events) parameters
+  sse:
+    enabled: true
+    heartbeat_interval: 15  # seconds
+    max_timeout: 300  # seconds
+  
+  # Request limits
+  limits:
+    max_request_size: 10485760  # 10MB in bytes
+    max_response_tokens: 4096
+    rate_limit_per_minute: 60
+  
+  # Response settings
+  response:
+    include_usage: true
+    include_timing: false

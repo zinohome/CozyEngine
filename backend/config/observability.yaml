@@ -1,0 +1,52 @@
+# Observability Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+observability:
+  # Logging
+  logging:
+    level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format: "json"  # json, text
+    
+    # Structured logging fields
+    include_fields:
+      request_id: true
+      user_id: true
+      session_id: true
+      personality_id: true
+      timestamp: true
+      
+    # Log sanitization
+    sanitize:
+      enabled: true
+      redact_patterns:
+        - "api_key"
+        - "secret"
+        - "password"
+        - "token"
+  
+  # Metrics
+  metrics:
+    enabled: true
+    export_interval: 60  # seconds
+    
+    # Metric types
+    collect:
+      request_count: true
+      request_duration: true
+      token_usage: true
+      engine_performance: true
+      error_rate: true
+  
+  # Tracing (OpenTelemetry)
+  tracing:
+    enabled: false
+    sample_rate: 0.1  # 10% of requests
+    export_protocol: "otlp"  # otlp, jaeger, zipkin
+  
+  # Error tracking (Sentry)
+  sentry:
+    enabled: false
+    traces_sample_rate: 0.1
+    profiles_sample_rate: 0.0
+    environment: "development"

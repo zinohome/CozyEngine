@@ -1,0 +1,59 @@
+# Engines Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+engines:
+  # AI Engine (LLM providers)
+  ai:
+    default_provider: "openai"
+    providers:
+      openai:
+        enabled: true
+        model: "gpt-4o-mini"
+        temperature: 0.7
+        max_tokens: 4096
+      anthropic:
+        enabled: false
+        model: "claude-3-5-sonnet-20241022"
+        temperature: 0.7
+        max_tokens: 4096
+      ollama:
+        enabled: false
+        model: "llama3.2"
+        temperature: 0.7
+  
+  # Knowledge Engine
+  knowledge:
+    default_provider: "cognee"
+    enabled: true
+    providers:
+      cognee:
+        enabled: true
+        timeout: 5.0
+      memobase:
+        enabled: false
+        timeout: 5.0
+  
+  # User Profile Engine
+  user_profile:
+    default_provider: "local"
+    enabled: true
+    timeout: 3.0
+  
+  # Chat Memory Engine
+  chat_memory:
+    default_provider: "mem0"
+    enabled: true
+    providers:
+      mem0:
+        enabled: true
+        timeout: 5.0
+      local:
+        enabled: true
+        timeout: 2.0
+  
+  # Tools Engine
+  tools:
+    enabled: true
+    timeout: 30.0
+    max_iterations: 5

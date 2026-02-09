@@ -1,0 +1,31 @@
+# Application Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+config_version: "2.0.0"
+
+app:
+  name: "CozyEngine"
+  version: "0.1.0"
+  description: "Modern AI Agent Orchestration Framework"
+  
+  # Environment: development, staging, production
+  environment: "development"
+  
+  # Debug mode
+  debug: true
+  
+  # Server settings
+  server:
+    host: "0.0.0.0"
+    port: 8000
+    reload: true
+    workers: 1
+  
+  # CORS settings
+  cors:
+    enabled: true
+    allow_origins: []  # Override with env var for production
+    allow_credentials: true
+    allow_methods: ["*"]
+    allow_headers: ["*"]

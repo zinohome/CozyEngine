@@ -1,0 +1,30 @@
+# Context Management Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+context:
+  # Token budget management
+  token_budget:
+    max_context_tokens: 100000
+    reserve_for_completion: 4096
+    personalization_budget: 10000
+  
+  # Parallel engine execution
+  parallel_execution:
+    enabled: true
+    max_workers: 3
+    timeout: 10.0  # seconds
+  
+  # Degradation strategy
+  degradation:
+    enabled: true
+    allow_partial_failure: true
+    min_required_engines: 0  # Continue even if all personalization engines fail
+  
+  # Context assembly
+  assembly:
+    include_system_prompt: true
+    include_knowledge: true
+    include_user_profile: true
+    include_chat_memory: true
+    include_tool_definitions: true
