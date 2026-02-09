@@ -80,7 +80,10 @@ class ChatOrchestrator:
             engine_type = ai_config.provider
             engine = await self.engine_registry.get_or_create(
                 engine_type,
-                {"api_key": self._get_api_key(engine_type)},
+                {
+                    "api_key": self._get_api_key(engine_type),
+                    "base_url": self._get_base_url(engine_type),
+                },
             )
 
             # 5. 调用 AI 引擎
@@ -215,7 +218,10 @@ class ChatOrchestrator:
             engine_type = ai_config.provider
             engine = await self.engine_registry.get_or_create(
                 engine_type,
-                {"api_key": self._get_api_key(engine_type)},
+                {
+                    "api_key": self._get_api_key(engine_type),
+                    "base_url": self._get_base_url(engine_type),
+                },
             )
 
             # 5. 持久化用户消息
@@ -319,6 +325,15 @@ class ChatOrchestrator:
 
         if engine_type == "openai":
             return os.getenv("OPENAI_API_KEY", "")
+        raise ValueError(f"Unknown engine type: {engine_type}")
+
+    def _get_base_url(self, engine_type: str) -> str:
+        """获取引擎 Base URL"""
+        import os
+
+        if engine_type == "openai":
+            # 如果未设置环境变量，使用默认 OpenAI URL
+            return os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
         raise ValueError(f"Unknown engine type: {engine_type}")
 
 
