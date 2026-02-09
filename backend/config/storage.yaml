@@ -1,0 +1,31 @@
+# Storage Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+storage:
+  # Database (PostgreSQL)
+  database:
+    pool_size: 10
+    max_overflow: 20
+    pool_timeout: 30.0
+    pool_recycle: 3600
+    echo: false  # SQL logging
+    
+  # Redis
+  redis:
+    enabled: true
+    max_connections: 50
+    socket_timeout: 5.0
+    socket_connect_timeout: 5.0
+    retry_on_timeout: true
+    
+    # Cache settings
+    cache:
+      enabled: true
+      default_ttl: 3600  # seconds
+      key_prefix: "cozyengine:"
+    
+    # Queue settings (optional)
+    queue:
+      enabled: false
+      default_queue: "default"

@@ -1,0 +1,34 @@
+# Tools Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+tools:
+  # Whitelist management
+  whitelist:
+    enabled: true
+    mode: "strict"  # strict, permissive
+    allowed_tools: []  # Empty means allow all when mode=permissive
+  
+  # Permission checks
+  permissions:
+    enabled: true
+    require_user_consent: true
+  
+  # Audit logging
+  audit:
+    enabled: true
+    log_all_calls: true
+    log_arguments: true
+    log_results: false
+  
+  # MCP (Model Context Protocol) service discovery
+  mcp:
+    enabled: false
+    discovery_url: ""
+    timeout: 5.0
+  
+  # Tool execution limits
+  limits:
+    max_concurrent_calls: 5
+    max_retry_attempts: 2
+    timeout_per_call: 30.0

@@ -1,0 +1,36 @@
+# Security Configuration
+# Version: v2.0
+# Last Updated: 2026-02-09
+
+security:
+  # Authentication
+  authentication:
+    enabled: false  # Will be enabled in later milestones
+    jwt:
+      algorithm: "HS256"
+      access_token_expire_minutes: 30
+      refresh_token_expire_days: 7
+  
+  # Authorization (RBAC)
+  authorization:
+    enabled: false  # Will be enabled in later milestones
+    default_role: "user"
+    
+  # Audit logging
+  audit:
+    enabled: true
+    log_all_requests: false
+    log_mutations: true
+    log_tool_calls: true
+    log_failed_auth: true
+    
+  # Rate limiting
+  rate_limiting:
+    enabled: false  # Will be enabled in later milestones
+    strategy: "sliding_window"
+    requests_per_minute: 60
+    
+  # API key validation
+  api_keys:
+    enabled: false  # Will be enabled in later milestones
+    header_name: "X-API-Key"
