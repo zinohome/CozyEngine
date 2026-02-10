@@ -1,6 +1,7 @@
 """聊天完成端点 - OpenAI 兼容"""
 
 import json
+import time
 from collections.abc import AsyncGenerator
 from typing import Union
 
@@ -105,6 +106,8 @@ async def chat_completions(
 
         # 流式响应
         if req.stream:
+            # 获取 request_id 用于响应头
+            request_id = getattr(request.state, 'request_id', 'unknown')
             return StreamingResponse(
                 _stream_response(
                     request=request,
@@ -123,6 +126,7 @@ async def chat_completions(
                     "Cache-Control": "no-cache",
                     "Connection": "keep-alive",
                     "X-Accel-Buffering": "no",
+                    "X-Request-ID": request_id,
                 },
             )
 
@@ -160,6 +164,18 @@ async def _stream_response(
     tools: list[dict] | None = None,
 ) -> AsyncGenerator[str, None]:
     """流式响应生成器"""
+    # 获取 request_id（从中间件设置）
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    start_time = time.time()
+    
+    logger.info(
+        "Stream chat started",
+        request_id=request_id,
+        user_id=user_id,
+        session_id=session_id,
+        personality_id=personality_id,
+    )
+    
     stream = orchestrator.chat_stream(
         user_id=user_id,
         session_id=session_id,
@@ -175,17 +191,45 @@ async def _stream_response(
             if await request.is_disconnected():
                 logger.info(
                     "Client disconnected from stream",
+                    request_id=request_id,
                     user_id=user_id,
                     session_id=session_id,
                     personality_id=personality_id,
                 )
                 break
             if chunk.get("data") == "[DONE]":
+                elapsed_time = time.time() - start_time
+                logger.info(
+                    "Stream chat completed",
+                    request_id=request_id,
+                    user_id=user_id,
+                    session_id=session_id,
+                    elapsed_time=elapsed_time,
+                )
                 yield "data: [DONE]\n\n"
             else:
-                yield f"data: {json.dumps(chunk)}\n\n"
+                # 添加 request_id 到响应中
+                chunk_with_id = {**chunk, "request_id": request_id}
+                yield f"data: {json.dumps(chunk_with_id)}\n\n"
     except Exception as e:
-        logger.error("Stream failed", error=str(e), exc_info=True)
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        logger.error(
+            "Stream failed",
+            request_id=request_id,
+            user_id=user_id,
+            session_id=session_id,
+            error=str(e),
+            exc_info=True,
+        )
+        # 统一错误响应格式
+        error_response = {
+            "error": {
+                "code": "STREAM_ERROR",
+                "message": str(e),
+                "request_id": request_id,
+            }
+        }
+        yield f"data: {json.dumps(error_response)}\n\n"
     finally:
-        await stream.aclose()
+        # 安全地关闭 stream
+        if hasattr(stream, 'aclose'):
+            await stream.aclose()
