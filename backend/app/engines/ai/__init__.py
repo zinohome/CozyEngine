@@ -11,9 +11,10 @@ import httpx
 class ChatMessage:
     """聊天消息"""
 
-    role: str  # user, assistant, system
+    role: str  # user, assistant, system, tool
     content: str
-    tool_calls: dict | None = None
+    tool_calls: dict | list[dict] | None = None  # For assistant role with tool calls
+    tool_call_id: str | None = None  # For tool role responses
 
 
 @dataclass
