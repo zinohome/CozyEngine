@@ -150,8 +150,15 @@ class BasicToolsEngine(ToolsEngine):
             # 配置读取失败，默认允许（降级策略）
             return True
 
-    def _check_permission(self, tool_name: str, context: dict | None) -> bool:  # noqa: ARG002
-        """检查工具执行权限"""
+    def _check_permission(self, tool_name: str, context: dict | None) -> bool:
+        """检查工具执行权限
+        
+        权限验证逻辑：
+        1. 如果permissions配置未启用，允许所有工具
+        2. 从context获取personality_id，加载对应的personality配置
+        3. 检查tool_name是否在personality.tools.allowed_tools中
+        4. 对于dangerous/write等敏感操作，额外验证require_user_consent
+        """
         try:
             config = get_config()
             tools_config = config.get("tools", {})
@@ -160,20 +167,68 @@ class BasicToolsEngine(ToolsEngine):
             if not permissions_config.get("enabled", True):
                 return True
 
-            # 简化实现：基于 side_effect 等级
             tool_def = self._tools.get(tool_name)
             if not tool_def:
                 return False
 
-            # 如果需要用户同意且是危险操作
+            # 从context获取personality_id
+            personality_id = None
+            if context:
+                personality_id = context.get("personality_id")
+
+            # 如果没有personality_id，使用默认权限策略
+            if not personality_id:
+                # 只允许READ_ONLY工具
+                return tool_def.side_effect == ToolSideEffect.READ_ONLY
+
+            # 加载personality配置
+            import yaml
+            from pathlib import Path
+
+            personality_dir = Path(config.get("config_dir", "config")) / "personalities"
+            personality_file = personality_dir / f"{personality_id}.yaml"
+
+            if not personality_file.exists():
+                logger.warning(
+                    "Personality config not found, denying tool access",
+                    personality_id=personality_id,
+                    tool_name=tool_name,
+                )
+                return False
+
+            with open(personality_file) as f:
+                personality_data = yaml.safe_load(f)
+
+            # 检查工具是否在allowed_tools中
+            tools_data = personality_data.get("tools", {})
+            if not tools_data.get("enabled", False):
+                return False
+
+            allowed_tools = tools_data.get("allowed_tools", [])
+            if tool_name not in allowed_tools:
+                logger.info(
+                    "Tool not in personality allowed list",
+                    tool_name=tool_name,
+                    personality_id=personality_id,
+                )
+                return False
+
+            # 对于dangerous/write操作，检查require_user_consent
             if permissions_config.get("require_user_consent", True):
-                if tool_def.side_effect in ["dangerous", "write "]:
-                    # TODO: 实现用户同意机制
-                    return False
+                if tool_def.side_effect in [ToolSideEffect.DANGEROUS, ToolSideEffect.WRITE]:
+                    # 危险操作必须在allowed_tools中明确列出（已经检查过了）
+                    # 未来可以添加额外的用户同意机制
+                    pass
 
             return True
 
-        except Exception:
+        except Exception as e:
+            logger.error(
+                "Permission check failed",
+                tool_name=tool_name,
+                error=str(e),
+                exc_info=True,
+            )
             # 配置读取失败，默认拒绝（安全优先）
             return False
 

@@ -1,0 +1,27 @@
+id: test_personality
+name: Test Personality
+description: Test personality with tool permissions
+system_prompt: |
+  You are a test assistant.
+  You can use tools to help answer questions.
+
+ai:
+  provider: openai
+  model: gpt-4
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 1.0
+
+tools:
+  enabled: true
+  allowed_tools:
+    - get_current_time
+    - calculate
+
+memory:
+  enabled: false
+
+metadata:
+  version: "1.0"
+  author: "CozyEngine Team"
+  purpose: "Testing tool execution"
