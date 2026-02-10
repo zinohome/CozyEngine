@@ -4,7 +4,7 @@ import json
 from collections.abc import AsyncGenerator
 from typing import Union
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.observability.logging import get_logger
@@ -53,6 +53,7 @@ def parse_request_body(body: dict) -> ChatCompletionRequest:
 @router.post("/completions", response_model=None)
 async def chat_completions(
     body: dict,
+    request: Request,
     user_id: str = Header(None),
     session_id: str = Header(None),
 ) -> Union[dict, StreamingResponse]:
@@ -106,6 +107,7 @@ async def chat_completions(
         if req.stream:
             return StreamingResponse(
                 _stream_response(
+                    request=request,
                     orchestrator=orchestrator,
                     user_id=user_id,
                     session_id=session_id,
@@ -117,6 +119,11 @@ async def chat_completions(
                     tools=req.tools,
                 ),
                 media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
             )
 
         # 非流式响应
@@ -141,6 +148,7 @@ async def chat_completions(
 
 
 async def _stream_response(
+    request: Request,
     orchestrator,
     user_id: str,
     session_id: str,
@@ -152,17 +160,26 @@ async def _stream_response(
     tools: list[dict] | None = None,
 ) -> AsyncGenerator[str, None]:
     """流式响应生成器"""
+    stream = orchestrator.chat_stream(
+        user_id=user_id,
+        session_id=session_id,
+        personality_id=personality_id,
+        message=message,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        top_p=top_p,
+        tools=tools,
+    )
     try:
-        async for chunk in orchestrator.chat_stream(
-            user_id=user_id,
-            session_id=session_id,
-            personality_id=personality_id,
-            message=message,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-            tools=tools,
-        ):
+        async for chunk in stream:
+            if await request.is_disconnected():
+                logger.info(
+                    "Client disconnected from stream",
+                    user_id=user_id,
+                    session_id=session_id,
+                    personality_id=personality_id,
+                )
+                break
             if chunk.get("data") == "[DONE]":
                 yield "data: [DONE]\n\n"
             else:
@@ -170,3 +187,5 @@ async def _stream_response(
     except Exception as e:
         logger.error("Stream failed", error=str(e), exc_info=True)
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    finally:
+        await stream.aclose()
