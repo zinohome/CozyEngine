@@ -32,3 +32,4 @@ tools:
     max_concurrent_calls: 5
     max_retry_attempts: 2
     timeout_per_call: 30.0
+    max_calls_per_minute: 10
