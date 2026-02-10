@@ -108,7 +108,64 @@ git push -u origin feature/m{milestone}-{task-number}-{description}
 - Scope: `(M{milestone}-{task})` e.g., `(M2-1)`
 - Include task_id in footer
 
-### Phase 7: Merge to Main
+### Phase 7: PR Review (MANDATORY)
+**Before merging, perform comprehensive code review**:
+
+#### Review Checklist:
+- ✅ **Functionality**: Core requirements fully met, no bugs
+- ✅ **Architecture Compliance**: 
+  - Follows 5-layer design (API/Orchestration/Context/Engines/Storage)
+  - Respects dependency direction rules
+  - No violations of singleton/stateless rules
+- ✅ **Code Quality**:
+  - Complete type hints on all public interfaces
+  - Docstrings on all public functions/classes
+  - Clear, readable logic
+  - No code smells or anti-patterns
+- ✅ **Error Handling**:
+  - Uses unified error model (error.code/message/request_id)
+  - Proper exception propagation
+  - No silent failures
+- ✅ **Observability**:
+  - Structured logs with request_id/user_id/session_id/personality_id
+  - No PII/secrets in logs
+  - Key operations logged (start/end/errors)
+  - Proper log levels
+- ✅ **Security**:
+  - No hardcoded credentials
+  - Input validation present
+  - No SQL injection risks
+  - Proper authentication/authorization checks
+- ✅ **Performance**:
+  - No obvious performance bottlenecks
+  - Proper async/await usage
+  - Resource cleanup (connections, files, streams)
+- ✅ **Testing**:
+  - All existing tests pass
+  - Critical paths have test coverage
+  - Edge cases considered
+- ✅ **Design Compliance**:
+  - Aligns with design docs (docs/engine-v2/*)
+  - No deviations without ADR
+  - API behavior matches OpenAI compatibility spec
+
+#### Review Process:
+1. Read through all changes carefully
+2. Run tests locally
+3. Check against design documents
+4. Identify P0 (blocking), P1 (should fix), P2 (nice to have) issues
+5. **If P0 issues found**: Create hotfix branch immediately
+6. **If P1 issues found**: Document for immediate follow-up hotfix
+7. **If only P2 issues**: Document for future optimization, OK to merge
+
+#### Review Output:
+Generate a structured review report with:
+- **✅ Passed checks**: What's good
+- **⚠️ Issues found**: Categorized by priority (P0/P1/P2)
+- **📊 Scoring**: Rate each dimension (Functionality, Architecture, Quality, etc.)
+- **🎯 Recommendation**: Merge / Fix P0 first / Major rework needed
+
+### Phase 8: Merge to Main
 ```bash
 git checkout main
 git merge feature/m{milestone}-{task} --no-ff -m "Merge feature/... into main
@@ -120,18 +177,18 @@ git push origin main
 ```
 **Use --no-ff**: Preserve complete branch history
 
-### Phase 8: Branch Cleanup
+### Phase 9: Branch Cleanup
 ```bash
 git branch -d feature/m{milestone}-{task}
 git push origin --delete feature/m{milestone}-{task}
 ```
 
-### Phase 9: Update Task Status
+### Phase 10: Update Task Status
 ```bash
 update_task(task_id, status="done")
 ```
 
-### Hotfix Workflow (if issues found post-merge)
+### Hotfix Workflow (if issues found post-merge or in PR review)
 1. **Create hotfix branch**:
    ```bash
    git checkout -b hotfix/m{milestone}-{task}-{issue-description}
@@ -147,18 +204,20 @@ update_task(task_id, status="done")
    
    Task: {task title} (#{task_id})"
    ```
-4. **Merge & cleanup** (Phase 7-8)
+4. **Merge & cleanup** (Phase 8-9)
 5. **No need to update task status** (already done)
 
 ### Key Principles
 - **One task = One feature branch** - Enables clean tracking and rollback
 - **Self-review before commit** - Catch issues early
+- **PR review before merge** - Ensure quality through peer review
 - **Test before merge** - Ensure quality
 - **Immediate cleanup** - Keep repository tidy
 - **Always include task_id** - Enable traceability
 - **Update vibe_kanban status** - Keep task board synchronized
 
 ### Common Mistakes to Avoid
+- ❌ Merging without PR review
 - ❌ Merging without self-review
 - ❌ Skipping tests
 - ❌ Forgetting to update task status
