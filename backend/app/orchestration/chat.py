@@ -143,6 +143,7 @@ class ChatOrchestrator:
                         response.tool_calls,
                         user_id,
                         session_id,
+                        personality_id,
                         request_id,
                     )
 
@@ -383,7 +384,7 @@ class ChatOrchestrator:
 
                     # 执行工具
                     tool_results = await self._execute_tool_calls(
-                        current_tool_calls, user_id, session_id, request_id
+                        current_tool_calls, user_id, session_id, personality_id, request_id
                     )
 
                     # 回填消息
@@ -508,7 +509,11 @@ class ChatOrchestrator:
         # 1. 从人格配置获取允许的工具
         personality_tools = []
         if hasattr(personality, "tools") and personality.tools:
-            personality_tools = personality.tools.get("allowed", [])
+            # Handle both dict (legacy) and PersonalityTools dataclass
+            if hasattr(personality.tools, "allowed_tools"):
+                personality_tools = personality.tools.allowed_tools
+            elif isinstance(personality.tools, dict):
+                personality_tools = personality.tools.get("allowed_tools", [])
 
         # 2. 如果请求中指定了工具，取交集
         if requested_tools:
@@ -524,6 +529,7 @@ class ChatOrchestrator:
         tool_calls: list[dict],
         user_id: str,
         session_id: str,
+        personality_id: str,
         request_id: str,
     ) -> list[dict]:
         """执行工具调用并记录审计"""
@@ -553,7 +559,11 @@ class ChatOrchestrator:
                 result = await self.tools_engine.invoke(
                     name=tool_name,
                     arguments=arguments,
-                    context={"user_id": user_id, "session_id": session_id},
+                    context={
+                        "user_id": user_id,
+                        "session_id": session_id,
+                        "personality_id": personality_id,
+                    },
                 )
 
                 # 记录审计日志

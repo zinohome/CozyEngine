@@ -1,0 +1,25 @@
+id: restricted
+name: Restricted Assistant
+description: An assistant with no tool permissions (for testing)
+system_prompt: |
+  You are a restricted assistant.
+  You do not have permission to use any tools.
+
+ai:
+  provider: openai
+  model: gpt-4
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 1.0
+
+tools:
+  enabled: true
+  allowed_tools: []  # No tools allowed
+
+memory:
+  enabled: false
+
+metadata:
+  version: "1.0"
+  author: "CozyEngine Team"
+  purpose: "Testing tool permission denial"
