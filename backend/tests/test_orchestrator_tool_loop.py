@@ -8,14 +8,17 @@
 5. 验证整个流程
 """
 
-import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.engines.ai import AIEngine, ChatMessage, ChatResponse
+import pytest
+
+from app.engines.ai import AIEngine, ChatResponse
 from app.engines.registry import EngineRegistry
 from app.engines.tools.basic import BasicToolsEngine
 from app.core.personalities import PersonalityRegistry, Personality
 from app.core.personalities.models import PersonalityAI, PersonalityTools, PersonalityMemory
+from app.context.service import ContextService
 from app.orchestration.chat import ChatOrchestrator
 
 
@@ -97,6 +100,32 @@ async def tools_engine():
     return engine
 
 
+def _build_dummy_context_config() -> SimpleNamespace:
+    return SimpleNamespace(
+        context=SimpleNamespace(
+            token_budget=SimpleNamespace(
+                max_context_tokens=1000,
+                reserve_for_completion=100,
+                personalization_budget=100,
+            ),
+            parallel_execution=SimpleNamespace(enabled=False, timeout=1.0),
+            assembly=SimpleNamespace(
+                include_system_prompt=True,
+                include_knowledge=False,
+                include_user_profile=False,
+                include_chat_memory=False,
+                include_tool_definitions=False,
+            ),
+            degradation=SimpleNamespace(enabled=True, allow_partial_failure=True, min_required_engines=0),
+        ),
+        engines=SimpleNamespace(
+            knowledge=SimpleNamespace(enabled=False, default_provider="cognee", providers={}),
+            user_profile=SimpleNamespace(enabled=False, default_provider="local", timeout=1.0),
+            chat_memory=SimpleNamespace(enabled=False, default_provider="mem0", providers={}),
+        ),
+    )
+
+
 @pytest.mark.asyncio
 async def test_tool_loop_single_iteration(personality_registry, tools_engine):
     """测试单次工具调用循环"""
@@ -125,11 +154,16 @@ async def test_tool_loop_single_iteration(personality_registry, tools_engine):
     mock_engine = MockAIEngine(mock_responses)
     engine_registry = EngineRegistry()
     engine_registry._engines["test"] = mock_engine
+    context_service = ContextService(
+        engine_registry=engine_registry,
+        config=_build_dummy_context_config(),
+    )
 
     # 创建orchestrator
     orchestrator = ChatOrchestrator(
         personality_registry=personality_registry,
         engine_registry=engine_registry,
+        context_service=context_service,
     )
     orchestrator.tools_engine = tools_engine
 
@@ -194,11 +228,16 @@ async def test_tool_loop_multiple_iterations(personality_registry, tools_engine)
 
     mock_engine = MockAIEngine(mock_responses)
     engine_registry = EngineRegistry()
+    context_service = ContextService(
+        engine_registry=engine_registry,
+        config=_build_dummy_context_config(),
+    )
     engine_registry._engines["test"] = mock_engine
 
     orchestrator = ChatOrchestrator(
         personality_registry=personality_registry,
         engine_registry=engine_registry,
+        context_service=context_service,
     )
     orchestrator.tools_engine = tools_engine
 
@@ -209,15 +248,14 @@ async def test_tool_loop_multiple_iterations(personality_registry, tools_engine)
                 with patch("app.services.audit.AuditService.log_tool_invocation", new=AsyncMock()):
                     async def mock_get_or_create(engine_type, config):
                         return mock_engine
+                    engine_registry.get_or_create = mock_get_or_create
 
-                engine_registry.get_or_create = mock_get_or_create
-
-                result = await orchestrator.chat(
-                    user_id="test_user",
-                    session_id="test_session",
-                    personality_id="test_personality",
-                    message="Test multiple tools",
-                )
+                    result = await orchestrator.chat(
+                        user_id="test_user",
+                        session_id="test_session",
+                        personality_id="test_personality",
+                        message="Test multiple tools",
+                    )
 
     # 验证多次迭代
     assert mock_engine.call_count == 3
@@ -247,10 +285,15 @@ async def test_tool_loop_iteration_limit(personality_registry, tools_engine):
 
     mock_engine = MockAIEngine(mock_responses)
     engine_registry = EngineRegistry()
+    context_service = ContextService(
+        engine_registry=engine_registry,
+        config=_build_dummy_context_config(),
+    )
 
     orchestrator = ChatOrchestrator(
         personality_registry=personality_registry,
         engine_registry=engine_registry,
+        context_service=context_service,
     )
     orchestrator.tools_engine = tools_engine
     orchestrator.max_tool_iterations = 10
@@ -262,15 +305,14 @@ async def test_tool_loop_iteration_limit(personality_registry, tools_engine):
                 with patch("app.services.audit.AuditService.log_tool_invocation", new=AsyncMock()):
                     async def mock_get_or_create(engine_type, config):
                         return mock_engine
+                    engine_registry.get_or_create = mock_get_or_create
 
-                engine_registry.get_or_create = mock_get_or_create
-
-                result = await orchestrator.chat(
-                    user_id="test_user",
-                    session_id="test_session",
-                    personality_id="test_personality",
-                    message="Test iteration limit",
-                )
+                    result = await orchestrator.chat(
+                        user_id="test_user",
+                        session_id="test_session",
+                        personality_id="test_personality",
+                        message="Test iteration limit",
+                    )
 
     # 验证：应该在10次迭代后停止
     assert mock_engine.call_count == 10  # 正好10次（迭代限制）
@@ -303,10 +345,15 @@ async def test_tool_execution_failure(personality_registry, tools_engine):
 
     mock_engine = MockAIEngine(mock_responses)
     engine_registry = EngineRegistry()
+    context_service = ContextService(
+        engine_registry=engine_registry,
+        config=_build_dummy_context_config(),
+    )
 
     orchestrator = ChatOrchestrator(
         personality_registry=personality_registry,
         engine_registry=engine_registry,
+        context_service=context_service,
     )
     orchestrator.tools_engine = tools_engine
 
@@ -317,15 +364,14 @@ async def test_tool_execution_failure(personality_registry, tools_engine):
                 with patch("app.services.audit.AuditService.log_tool_invocation", new=AsyncMock()):
                     async def mock_get_or_create(engine_type, config):
                         return mock_engine
+                    engine_registry.get_or_create = mock_get_or_create
 
-                engine_registry.get_or_create = mock_get_or_create
-
-                result = await orchestrator.chat(
-                    user_id="test_user",
-                    session_id="test_session",
-                    personality_id="test_personality",
-                    message="Test tool failure",
-                )
+                    result = await orchestrator.chat(
+                        user_id="test_user",
+                        session_id="test_session",
+                        personality_id="test_personality",
+                        message="Test tool failure",
+                    )
 
     # 验证：即使工具失败，流程应该继续
     assert mock_engine.call_count == 2
@@ -377,10 +423,15 @@ async def test_permission_denied_tool(personality_registry, tools_engine):
 
     mock_engine = MockAIEngine(mock_responses)
     engine_registry = EngineRegistry()
+    context_service = ContextService(
+        engine_registry=engine_registry,
+        config=_build_dummy_context_config(),
+    )
 
     orchestrator = ChatOrchestrator(
         personality_registry=personality_registry,
         engine_registry=engine_registry,
+        context_service=context_service,
     )
     orchestrator.tools_engine = tools_engine
 
@@ -391,15 +442,14 @@ async def test_permission_denied_tool(personality_registry, tools_engine):
                 with patch("app.services.audit.AuditService.log_tool_invocation", new=AsyncMock()):
                     async def mock_get_or_create(engine_type, config):
                         return mock_engine
+                    engine_registry.get_or_create = mock_get_or_create
 
-                engine_registry.get_or_create = mock_get_or_create
-
-                result = await orchestrator.chat(
-                    user_id="test_user",
-                    session_id="test_session",
-                    personality_id="restricted",
-                    message="What time is it?",
-                )
+                    result = await orchestrator.chat(
+                        user_id="test_user",
+                        session_id="test_session",
+                        personality_id="restricted",
+                        message="What time is it?",
+                    )
 
     # 验证：权限拒绝不会中断流程
     assert mock_engine.call_count == 2

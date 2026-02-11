@@ -12,6 +12,7 @@ from app.core.exceptions import (
     NotFoundError,
 )
 from app.core.personalities.models import PersonalityRegistry
+from app.context.service import ContextService
 from app.engines.ai import ChatMessage
 from app.engines.registry import EngineRegistry
 from app.engines.tools import ToolsEngine
@@ -30,11 +31,13 @@ class ChatOrchestrator:
         self,
         personality_registry: PersonalityRegistry,
         engine_registry: EngineRegistry,
+        context_service: ContextService | None = None,
     ):
         self.personality_registry = personality_registry
         self.engine_registry = engine_registry
         self.tools_engine: ToolsEngine | None = None
         self.max_tool_iterations = 10  # 默认最大迭代次数
+        self.context_service = context_service or ContextService(engine_registry)
 
     async def initialize_tools_engine(self) -> None:
         """初始化工具引擎"""
@@ -72,23 +75,22 @@ class ChatOrchestrator:
                 personality_id=personality_id,
             )
 
-            # 2. 准备消息
-            messages = [
-                ChatMessage(
-                    role="system",
-                    content=personality.system_prompt,
-                ),
-                ChatMessage(
-                    role="user",
-                    content=message,
-                ),
-            ]
-
-            # 3. 获取模型参数
+            # 2. 获取模型参数
             ai_config = personality.ai
             model_temperature = temperature if temperature is not None else ai_config.temperature
             model_max_tokens = max_tokens if max_tokens is not None else ai_config.max_tokens
             model_top_p = top_p if top_p is not None else ai_config.top_p
+
+            # 3. 构建上下文
+            context_bundle = await self.context_service.build_context_bundle(
+                user_id=user_id,
+                session_id=session_id,
+                current_message=message,
+                personality=personality,
+                max_tokens=model_max_tokens,
+                request_id=request_id,
+            )
+            messages = self.context_service.to_messages(context_bundle, message)
 
             # 4. 获取引擎
             engine_type = ai_config.provider
@@ -230,6 +232,8 @@ class ChatOrchestrator:
                 "metadata": {
                     "request_id": request_id,
                     "elapsed_time": elapsed_time,
+                    "context": context_bundle.metadata,
+                    "token_budget": context_bundle.token_budget.sections,
                 },
             }
 
@@ -271,23 +275,22 @@ class ChatOrchestrator:
                 personality_id=personality_id,
             )
 
-            # 2. 准备消息
-            messages = [
-                ChatMessage(
-                    role="system",
-                    content=personality.system_prompt,
-                ),
-                ChatMessage(
-                    role="user",
-                    content=message,
-                ),
-            ]
-
-            # 3. 获取模型参数
+            # 2. 获取模型参数
             ai_config = personality.ai
             model_temperature = temperature if temperature is not None else ai_config.temperature
             model_max_tokens = max_tokens if max_tokens is not None else ai_config.max_tokens
             model_top_p = top_p if top_p is not None else ai_config.top_p
+
+            # 3. 构建上下文
+            context_bundle = await self.context_service.build_context_bundle(
+                user_id=user_id,
+                session_id=session_id,
+                current_message=message,
+                personality=personality,
+                max_tokens=model_max_tokens,
+                request_id=request_id,
+            )
+            messages = self.context_service.to_messages(context_bundle, message)
 
             # 4. 获取引擎
             engine_type = ai_config.provider
@@ -630,6 +633,7 @@ async def initialize_orchestrator(
     _orchestrator = ChatOrchestrator(
         personality_registry=personality_registry,
         engine_registry=engine_registry,
+        context_service=ContextService(engine_registry),
     )
     
     # 初始化工具引擎

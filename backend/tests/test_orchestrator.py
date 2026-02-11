@@ -1,16 +1,19 @@
 """编排器测试"""
 
-import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.core.personalities.models import (
     Personality,
     PersonalityAI,
     PersonalityRegistry,
 )
-from app.engines.ai import ChatMessage, ChatResponse
+from app.engines.ai import ChatResponse
 from app.engines.registry import EngineRegistry
 from app.core.exceptions import NotFoundError
+from app.context.service import ContextService
 from app.orchestration.chat import ChatOrchestrator
 
 
@@ -40,9 +43,42 @@ def engine_registry():
 
 
 @pytest.fixture
-def orchestrator(personality_registry, engine_registry):
+def context_service(engine_registry):
+    """Create a context service with dummy config"""
+    dummy_config = SimpleNamespace(
+        context=SimpleNamespace(
+            token_budget=SimpleNamespace(
+                max_context_tokens=1000,
+                reserve_for_completion=100,
+                personalization_budget=100,
+            ),
+            parallel_execution=SimpleNamespace(enabled=False, timeout=1.0),
+            assembly=SimpleNamespace(
+                include_system_prompt=True,
+                include_knowledge=False,
+                include_user_profile=False,
+                include_chat_memory=False,
+                include_tool_definitions=False,
+            ),
+            degradation=SimpleNamespace(enabled=True, allow_partial_failure=True, min_required_engines=0),
+        ),
+        engines=SimpleNamespace(
+            knowledge=SimpleNamespace(enabled=False, default_provider="cognee", providers={}),
+            user_profile=SimpleNamespace(enabled=False, default_provider="local", timeout=1.0),
+            chat_memory=SimpleNamespace(enabled=False, default_provider="mem0", providers={}),
+        ),
+    )
+    return ContextService(engine_registry, config=dummy_config)
+
+
+@pytest.fixture
+def orchestrator(personality_registry, engine_registry, context_service):
     """Create a test orchestrator"""
-    return ChatOrchestrator(personality_registry, engine_registry)
+    return ChatOrchestrator(
+        personality_registry=personality_registry,
+        engine_registry=engine_registry,
+        context_service=context_service,
+    )
 
 
 class TestChatOrchestrator:
@@ -161,8 +197,32 @@ class TestOrchestratorInitialization:
         """Test orchestrator initialization"""
         from app.orchestration.chat import initialize_orchestrator
 
+        dummy_config = SimpleNamespace(
+            context=SimpleNamespace(
+                token_budget=SimpleNamespace(
+                    max_context_tokens=1000,
+                    reserve_for_completion=100,
+                    personalization_budget=100,
+                ),
+                parallel_execution=SimpleNamespace(enabled=False, timeout=1.0),
+                assembly=SimpleNamespace(
+                    include_system_prompt=True,
+                    include_knowledge=False,
+                    include_user_profile=False,
+                    include_chat_memory=False,
+                    include_tool_definitions=False,
+                ),
+                degradation=SimpleNamespace(enabled=True, allow_partial_failure=True, min_required_engines=0),
+            ),
+            engines=SimpleNamespace(
+                knowledge=SimpleNamespace(enabled=False, default_provider="cognee", providers={}),
+                user_profile=SimpleNamespace(enabled=False, default_provider="local", timeout=1.0),
+                chat_memory=SimpleNamespace(enabled=False, default_provider="mem0", providers={}),
+            ),
+        )
+
         personality_registry = PersonalityRegistry()
         engine_registry = EngineRegistry()
-
-        orchestrator = await initialize_orchestrator(personality_registry, engine_registry)
+        with patch("app.context.service.get_config", return_value=dummy_config):
+            orchestrator = await initialize_orchestrator(personality_registry, engine_registry)
         assert orchestrator is not None
