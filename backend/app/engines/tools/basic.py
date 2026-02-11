@@ -4,7 +4,7 @@ import time
 from collections import defaultdict
 
 from app.core.config.manager import get_config
-from app.engines.tools import ToolDefinition, ToolInvocationResult, ToolsEngine
+from app.engines.tools import ToolDefinition, ToolInvocationResult, ToolsEngine, ToolSideEffect
 from app.engines.tools.built_in import BuiltInTools
 from app.observability.logging import get_logger
 
@@ -132,14 +132,13 @@ class BasicToolsEngine(ToolsEngine):
         """检查工具是否在白名单中"""
         try:
             config = get_config()
-            tools_config = config.get("tools", {})
-            whitelist_config = tools_config.get("whitelist", {})
+            whitelist_config = config.tools.whitelist
 
-            if not whitelist_config.get("enabled", True):
+            if not whitelist_config.enabled:
                 return True
 
-            mode = whitelist_config.get("mode", "strict")
-            allowed_tools = whitelist_config.get("allowed_tools", [])
+            mode = whitelist_config.mode
+            allowed_tools = whitelist_config.allowed_tools
 
             if mode == "permissive" and not allowed_tools:
                 return True
@@ -161,10 +160,9 @@ class BasicToolsEngine(ToolsEngine):
         """
         try:
             config = get_config()
-            tools_config = config.get("tools", {})
-            permissions_config = tools_config.get("permissions", {})
+            permissions_config = config.tools.permissions
 
-            if not permissions_config.get("enabled", True):
+            if not permissions_config.enabled:
                 return True
 
             tool_def = self._tools.get(tool_name)
@@ -214,7 +212,7 @@ class BasicToolsEngine(ToolsEngine):
                 return False
 
             # 对于dangerous/write操作，检查require_user_consent
-            if permissions_config.get("require_user_consent", True):
+            if permissions_config.require_user_consent:
                 if tool_def.side_effect in [ToolSideEffect.DANGEROUS, ToolSideEffect.WRITE]:
                     # 危险操作必须在allowed_tools中明确列出（已经检查过了）
                     # 未来可以添加额外的用户同意机制
@@ -236,10 +234,9 @@ class BasicToolsEngine(ToolsEngine):
         """检查速率限制"""
         try:
             config = get_config()
-            tools_config = config.get("tools", {})
-            limits_config = tools_config.get("limits", {})
+            limits_config = config.tools.limits
 
-            max_calls_per_minute = limits_config.get("max_calls_per_minute", 10)
+            max_calls_per_minute = limits_config.max_calls_per_minute
 
             # 清理 60 秒前的记录
             current_time = time.time()

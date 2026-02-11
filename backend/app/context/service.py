@@ -320,12 +320,13 @@ class ContextService:
         try:
             session_uuid = uuid.UUID(session_id)
         except ValueError:
-            logger.warning(
-                "Invalid session_id for recent message lookup",
+            session_uuid = uuid.uuid5(uuid.NAMESPACE_URL, session_id)
+            logger.info(
+                "Normalized non-UUID session_id for recent message lookup",
                 request_id=request_id,
                 session_id=session_id,
+                normalized_session_id=str(session_uuid),
             )
-            return []
 
         async with db_manager.session() as session:
             result = await session.execute(

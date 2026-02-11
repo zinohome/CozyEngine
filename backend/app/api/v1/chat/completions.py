@@ -5,10 +5,12 @@ import time
 from collections.abc import AsyncGenerator
 from typing import Union
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, Request
 from fastapi.responses import StreamingResponse
 
+from app.core.exceptions import ValidationError
 from app.observability.logging import get_logger
+from app.observability.logging import bind_request_context
 from app.orchestration.chat import get_orchestrator
 
 logger = get_logger(__name__)
@@ -74,81 +76,85 @@ async def chat_completions(
         "stream": false
     }
     """
-    try:
-        # 验证必需字段
-        if not body.get("messages"):
-            raise HTTPException(status_code=400, detail="messages is required")
+    # 验证必需字段
+    if not body.get("messages"):
+        raise ValidationError("messages is required", details={"field": "messages"})
 
-        if not user_id:
-            raise HTTPException(status_code=400, detail="user_id header is required")
+    if not user_id:
+        raise ValidationError("user_id header is required", details={"field": "user_id"})
 
-        if not session_id:
-            raise HTTPException(status_code=400, detail="session_id header is required")
-
-        # 解析请求
-        req = parse_request_body(body)
-
-        # 获取最后一条消息内容
-        if not req.messages:
-            raise HTTPException(status_code=400, detail="messages cannot be empty")
-
-        last_message = req.messages[-1]
-        if last_message.get("role") != "user":
-            raise HTTPException(status_code=400, detail="last message must be from user")
-
-        user_message = last_message.get("content", "")
-
-        # 获取编排器
-        orchestrator = get_orchestrator()
-
-        # 确定使用的人格 ID (从 model 参数)
-        personality_id = req.model if req.model != "default" else "default"
-
-        # 流式响应
-        if req.stream:
-            # 获取 request_id 用于响应头
-            request_id = getattr(request.state, 'request_id', 'unknown')
-            return StreamingResponse(
-                _stream_response(
-                    request=request,
-                    orchestrator=orchestrator,
-                    user_id=user_id,
-                    session_id=session_id,
-                    personality_id=personality_id,
-                    message=user_message,
-                    temperature=req.temperature,
-                    max_tokens=req.max_tokens,
-                    top_p=req.top_p,
-                    tools=req.tools,
-                ),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                    "X-Accel-Buffering": "no",
-                    "X-Request-ID": request_id,
-                },
-            )
-
-        # 非流式响应
-        response = await orchestrator.chat(
-            user_id=user_id,
-            session_id=session_id,
-            personality_id=personality_id,
-            message=user_message,
-            temperature=req.temperature,
-            max_tokens=req.max_tokens,
-            top_p=req.top_p,
-            tools=req.tools,
+    if not session_id:
+        raise ValidationError(
+            "session_id header is required", details={"field": "session_id"}
         )
 
-        return response
+    # 解析请求
+    req = parse_request_body(body)
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Chat request failed", error=str(e), exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    # 获取最后一条消息内容
+    if not req.messages:
+        raise ValidationError("messages cannot be empty", details={"field": "messages"})
+
+    last_message = req.messages[-1]
+    if last_message.get("role") != "user":
+        raise ValidationError(
+            "last message must be from user", details={"field": "messages[-1].role"}
+        )
+
+    user_message = last_message.get("content", "")
+
+    # 获取编排器
+    orchestrator = get_orchestrator()
+
+    # 确定使用的人格 ID (从 model 参数)
+    personality_id = req.model if req.model != "default" else "default"
+
+    # 绑定完整上下文到日志
+    request_id = getattr(request.state, "request_id", "unknown")
+    bind_request_context(
+        request_id=request_id,
+        user_id=user_id,
+        session_id=session_id,
+        personality_id=personality_id,
+    )
+
+    # 流式响应
+    if req.stream:
+        return StreamingResponse(
+            _stream_response(
+                request=request,
+                orchestrator=orchestrator,
+                user_id=user_id,
+                session_id=session_id,
+                personality_id=personality_id,
+                message=user_message,
+                temperature=req.temperature,
+                max_tokens=req.max_tokens,
+                top_p=req.top_p,
+                tools=req.tools,
+            ),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+                "X-Request-ID": request_id,
+            },
+        )
+
+    # 非流式响应
+    response = await orchestrator.chat(
+        user_id=user_id,
+        session_id=session_id,
+        personality_id=personality_id,
+        message=user_message,
+        temperature=req.temperature,
+        max_tokens=req.max_tokens,
+        top_p=req.top_p,
+        tools=req.tools,
+    )
+
+    return response
 
 
 async def _stream_response(

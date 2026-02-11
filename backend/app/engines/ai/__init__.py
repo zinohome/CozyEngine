@@ -83,9 +83,15 @@ class AIEngine(ABC):
 class OpenAIProvider(AIEngine):
     """OpenAI 提供商"""
 
-    def __init__(self, api_key: str, base_url: str = "https://api.openai.com/v1"):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://api.openai.com/v1",
+        model: str = "gpt-4",
+    ):
         self.api_key = api_key
         self.base_url = base_url
+        self.model = model
         self.client = None
         self._initialized = False
 
@@ -135,7 +141,7 @@ class OpenAIProvider(AIEngine):
             ]
 
             kwargs = {
-                "model": "gpt-4",
+                "model": self.model,
                 "messages": openai_messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
@@ -194,7 +200,7 @@ class OpenAIProvider(AIEngine):
             ]
 
             kwargs = {
-                "model": "gpt-4",
+                "model": self.model,
                 "messages": openai_messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,

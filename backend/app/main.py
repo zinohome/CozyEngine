@@ -3,12 +3,17 @@
 import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.health import router as health_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.personalities import router as personalities_router
 from app.core.config import Config, ConfigurationError, get_config
+from app.core.exceptions import ErrorDetail, ErrorResponse
 from app.core.personalities import PersonalityLoader, PersonalityRegistry, initialize_personality_registry
 from app.engines.registry import engine_registry
 from app.middleware import (
@@ -80,6 +85,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    """统一 HTTP 异常响应格式"""
+    request_id = getattr(request.state, "request_id", None)
+    error_response = ErrorResponse(
+        error=ErrorDetail(
+            code="HTTP_ERROR",
+            message=str(exc.detail),
+            request_id=request_id,
+        )
+    )
+    return JSONResponse(status_code=exc.status_code, content=error_response.model_dump())
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """统一请求校验错误响应格式"""
+    request_id = getattr(request.state, "request_id", None)
+    error_response = ErrorResponse(
+        error=ErrorDetail(
+            code="VALIDATION_ERROR",
+            message="Validation failed",
+            request_id=request_id,
+            details={"errors": exc.errors()},
+        )
+    )
+    return JSONResponse(status_code=422, content=error_response.model_dump())
+
 # Add middleware stack (order matters - first added = outermost)
 # 1. Request context (outermost - sets request_id)
 app.add_middleware(RequestContextMiddleware)
@@ -103,6 +139,7 @@ if config.app.cors.enabled:
 # Register routers
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api")
+app.include_router(personalities_router, prefix="/api")
 
 
 @app.get("/")

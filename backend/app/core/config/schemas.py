@@ -257,6 +257,7 @@ class ToolsLimitsConfig(BaseModel):
     max_concurrent_calls: int = Field(default=5, ge=1, le=50)
     max_retry_attempts: int = Field(default=2, ge=0, le=5)
     timeout_per_call: float = Field(default=30.0, ge=1.0, le=300.0)
+    max_calls_per_minute: int = Field(default=10, ge=1, le=1000)
 
 
 class ToolsConfig(BaseModel):

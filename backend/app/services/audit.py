@@ -1,9 +1,6 @@
 """审计事件服务"""
 
 import uuid
-from datetime import datetime
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.observability.logging import get_logger
 from app.storage.database import db_manager
@@ -16,6 +13,15 @@ class AuditService:
     """审计服务 - 记录工具调用等关键操作"""
 
     @staticmethod
+    def _normalize_uuid(value: str | None, namespace: uuid.UUID) -> uuid.UUID | None:
+        if not value:
+            return None
+        try:
+            return uuid.UUID(value)
+        except ValueError:
+            return uuid.uuid5(namespace, value)
+
+    @staticmethod
     async def log_tool_invocation(
         user_id: str,
         session_id: str,
@@ -25,27 +31,28 @@ class AuditService:
         success: bool,
         execution_time: float,
         request_id: str | None = None,
+        personality_id: str | None = None,
     ) -> str:
         """记录工具调用审计事件"""
         try:
+            normalized_user_id = AuditService._normalize_uuid(user_id, uuid.NAMESPACE_DNS)
+            normalized_session_id = AuditService._normalize_uuid(session_id, uuid.NAMESPACE_URL)
+
             async with db_manager.session() as session:
                 audit_event = AuditEvent(
-                    id=str(uuid.uuid4()),
+                    id=uuid.uuid4(),
                     event_type="tool_invocation",
-                    user_id=user_id,
-                    session_id=session_id,
+                    user_id=normalized_user_id,
+                    session_id=normalized_session_id,
                     request_id=request_id,
-                    resource_type="tool",
-                    resource_id=tool_name,
-                    action="invoke",
-                    metadata={
+                    personality_id=personality_id,
+                    payload={
                         "tool_name": tool_name,
                         "arguments": arguments,
                         "result": result if success else {"error": result.get("error")},
                         "success": success,
                         "execution_time": execution_time,
                     },
-                    created_at=datetime.now(),  # noqa: DTZ005
                 )
 
                 session.add(audit_event)
@@ -58,7 +65,7 @@ class AuditService:
                     success=success,
                 )
 
-                return audit_event.id
+                return str(audit_event.id)
 
         except Exception as e:
             logger.error(

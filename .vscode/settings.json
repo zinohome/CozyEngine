@@ -8,5 +8,8 @@
         "--mcp"
       ]
     }
+  },
+  "chat.tools.terminal.autoApprove": {
+    "git -C /config/CozyProjects/CozyEngine": true
   }
 }

@@ -27,21 +27,23 @@ class EngineRegistry:
 
     async def get_or_create(self, engine_type: str, config: dict[str, Any]) -> AIEngine:
         """获取或创建引擎实例"""
-        # 确保只有一个线程创建引擎
-        if engine_type not in self._locks:
-            self._locks[engine_type] = asyncio.Lock()
+        engine_key = self._engine_cache_key(engine_type, config)
 
-        async with self._locks[engine_type]:
+        # 确保只有一个线程创建引擎
+        if engine_key not in self._locks:
+            self._locks[engine_key] = asyncio.Lock()
+
+        async with self._locks[engine_key]:
             # 检查缓存
-            if engine_type in self._engines:
-                return self._engines[engine_type]
+            if engine_key in self._engines:
+                return self._engines[engine_key]
 
             # 创建新实例
             engine = self._create_engine(engine_type, config)
             await engine.initialize()
 
-            self._engines[engine_type] = engine
-            logger.info("Engine created and cached", engine_type=engine_type)
+            self._engines[engine_key] = engine
+            logger.info("Engine created and cached", engine_key=engine_key)
             return engine
 
     def _create_engine(self, engine_type: str, config: dict[str, Any]) -> AIEngine:
@@ -49,9 +51,10 @@ class EngineRegistry:
         if engine_type == "openai":
             api_key = config.get("api_key")
             base_url = config.get("base_url", "https://api.openai.com/v1")
+            model = config.get("model", "gpt-4")
             if not api_key:
                 raise ValueError("OpenAI API key is required")
-            return OpenAIProvider(api_key=api_key, base_url=base_url)
+            return OpenAIProvider(api_key=api_key, base_url=base_url, model=model)
 
         raise ValueError(f"Unknown engine type: {engine_type}")
 
@@ -133,6 +136,13 @@ class EngineRegistry:
     async def get(self, engine_type: str) -> AIEngine | None:
         """获取已缓存的引擎"""
         return self._engines.get(engine_type)
+
+    @staticmethod
+    def _engine_cache_key(engine_type: str, config: dict[str, Any]) -> str:
+        model = config.get("model")
+        if model:
+            return f"{engine_type}:{model}"
+        return engine_type
 
     async def close_all(self) -> None:
         """关闭所有引擎"""

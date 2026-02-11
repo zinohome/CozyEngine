@@ -5,6 +5,7 @@ import time
 import uuid
 from datetime import datetime
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.manager import get_config
@@ -20,6 +21,7 @@ from app.engines.tools.basic import BasicToolsEngine
 from app.observability.logging import get_logger
 from app.services.audit import AuditService
 from app.storage.database import db_manager
+from app.storage.models import Message, Session
 
 logger = get_logger(__name__)
 
@@ -99,6 +101,7 @@ class ChatOrchestrator:
                 {
                     "api_key": self._get_api_key(engine_type),
                     "base_url": self._get_base_url(engine_type),
+                    "model": ai_config.model,
                 },
             )
 
@@ -299,6 +302,7 @@ class ChatOrchestrator:
                 {
                     "api_key": self._get_api_key(engine_type),
                     "base_url": self._get_base_url(engine_type),
+                    "model": ai_config.model,
                 },
             )
 
@@ -479,16 +483,67 @@ class ChatOrchestrator:
         request_id: str,
     ):
         """持久化消息到数据库"""
-        # TODO: 实现消息模型和持久化逻辑
-        # 这里需要与 M0-4 的数据库设计集成
+        normalized_user_id = self._normalize_uuid(user_id, uuid.NAMESPACE_DNS)
+        normalized_session_id = self._normalize_uuid(session_id, uuid.NAMESPACE_URL)
+
+        session_obj = await self._get_or_create_session(
+            session=session,
+            session_id=normalized_session_id,
+            user_id=normalized_user_id,
+            personality_id=personality_id,
+            external_session_id=session_id,
+        )
+
+        message = Message(
+            session_id=session_obj.id,
+            user_id=normalized_user_id,
+            role=role,
+            content=content,
+            message_metadata={"request_id": request_id},
+        )
+        session.add(message)
+
+        session_obj.message_count += 1
+        session_obj.last_message_at = datetime.utcnow()
+
         logger.debug(
             "Message persisted",
-            user_id=user_id,
-            session_id=session_id,
+            user_id=str(normalized_user_id),
+            session_id=str(session_obj.id),
             role=role,
             request_id=request_id,
         )
-        return {"id": str(uuid.uuid4()), "role": role}
+        return {"id": str(message.id), "role": role}
+
+    @staticmethod
+    def _normalize_uuid(value: str, namespace: uuid.UUID) -> uuid.UUID:
+        try:
+            return uuid.UUID(value)
+        except ValueError:
+            return uuid.uuid5(namespace, value)
+
+    async def _get_or_create_session(
+        self,
+        session: AsyncSession,
+        session_id: uuid.UUID,
+        user_id: uuid.UUID,
+        personality_id: str,
+        external_session_id: str,
+    ) -> Session:
+        result = await session.execute(select(Session).where(Session.id == session_id))
+        session_obj = result.scalar_one_or_none()
+        if session_obj:
+            return session_obj
+
+        session_obj = Session(
+            id=session_id,
+            user_id=user_id,
+            personality_id=personality_id,
+            message_count=0,
+            session_metadata={"external_session_id": external_session_id},
+        )
+        session.add(session_obj)
+        return session_obj
 
     def _get_api_key(self, engine_type: str) -> str:
         """获取引擎 API 密钥"""
@@ -579,6 +634,7 @@ class ChatOrchestrator:
                     success=result.success,
                     execution_time=result.execution_time,
                     request_id=request_id,
+                    personality_id=personality_id,
                 )
 
                 # 构造工具结果消息

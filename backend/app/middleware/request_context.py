@@ -17,8 +17,14 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
 
+        # 绑定可用的请求标识（来自 headers）
+        user_id = request.headers.get("user_id")
+        session_id = request.headers.get("session_id")
+        request.state.user_id = user_id
+        request.state.session_id = session_id
+
         # 绑定到日志上下文
-        bind_request_context(request_id=request_id)
+        bind_request_context(request_id=request_id, user_id=user_id, session_id=session_id)
 
         try:
             response = await call_next(request)
