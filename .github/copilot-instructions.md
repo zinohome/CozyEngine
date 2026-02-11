@@ -52,13 +52,16 @@
    ```
    Review: description, acceptance criteria, dependencies, design docs
 
-### Phase 2: Branch Creation
+### Phase 1.5: Repo Hygiene Check
+1. Ensure all previous work is already on `main`.
+2. Ensure no open PRs or leftover feature branches for this repo.
+
+### Phase 2: Main Branch Sync (No PR)
 ```bash
 git checkout main
 git pull origin main
-git checkout -b feature/m{milestone}-{task-number}-{short-description}
 ```
-**Naming convention**: `feature/m2-1-sse-streaming`, `hotfix/m2-1-request-id`
+Develop directly on `main`. Do not create feature branches or PRs.
 
 ### Phase 3: Development & Implementation
 1. **Read design docs** referenced in task (e.g., docs/engine-v2/*)
@@ -90,7 +93,7 @@ pytest -q
 ```
 Ensure all tests pass before proceeding.
 
-### Phase 6: Commit & Push
+### Phase 6: Commit & Push (Main Only)
 ```bash
 git add {changed-files}
 git commit -m "feat(M{milestone}-{task}): {short description}
@@ -100,7 +103,7 @@ git commit -m "feat(M{milestone}-{task}): {short description}
 
 Deliverable: {task title} (Task #{task_id})"
 
-git push -u origin feature/m{milestone}-{task-number}-{description}
+git push origin main
 ```
 
 **Commit message format**:
@@ -108,8 +111,8 @@ git push -u origin feature/m{milestone}-{task-number}-{description}
 - Scope: `(M{milestone}-{task})` e.g., `(M2-1)`
 - Include task_id in footer
 
-### Phase 7: PR Review (MANDATORY)
-**Before merging, perform comprehensive code review**:
+### Phase 7: Local Review Report (MANDATORY)
+**Before delivery, perform comprehensive code review**:
 
 #### Review Checklist:
 - ✅ **Functionality**: Core requirements fully met, no bugs
@@ -154,74 +157,62 @@ git push -u origin feature/m{milestone}-{task-number}-{description}
 2. Run tests locally
 3. Check against design documents
 4. Identify P0 (blocking), P1 (should fix), P2 (nice to have) issues
-5. **If P0 issues found**: Create hotfix branch immediately
+5. **If P0 issues found**: Fix immediately on main before delivery
 6. **If P1 issues found**: Document for immediate follow-up hotfix
-7. **If only P2 issues**: Document for future optimization, OK to merge
+7. **If only P2 issues**: Document for future optimization, OK to deliver
 
 #### Review Output:
 Generate a structured review report with:
 - **✅ Passed checks**: What's good
 - **⚠️ Issues found**: Categorized by priority (P0/P1/P2)
 - **📊 Scoring**: Rate each dimension (Functionality, Architecture, Quality, etc.)
-- **🎯 Recommendation**: Merge / Fix P0 first / Major rework needed
+- **🎯 Recommendation**: Deliver / Fix P0 first / Major rework needed
 
-### Phase 8: Merge to Main
-```bash
-git checkout main
-git merge feature/m{milestone}-{task} --no-ff -m "Merge feature/... into main
+### Phase 8: Delivery on Main
+1. Ensure `main` is pushed to origin.
+2. Attach the review report to the task record if needed.
 
-{summary of what was completed}
-{key deliverables}"
-
-git push origin main
-```
-**Use --no-ff**: Preserve complete branch history
-
-### Phase 9: Branch Cleanup
-```bash
-git branch -d feature/m{milestone}-{task}
-git push origin --delete feature/m{milestone}-{task}
-```
-
-### Phase 10: Update Task Status
+### Phase 9: Update Task Status
 ```bash
 update_task(task_id, status="done")
 ```
 
-### Hotfix Workflow (if issues found post-merge or in PR review)
-1. **Create hotfix branch**:
-   ```bash
-   git checkout -b hotfix/m{milestone}-{task}-{issue-description}
-   ```
+### Hotfix Workflow (if issues found post-delivery)
+1. **Sync main**:
+  ```bash
+  git checkout main
+  git pull origin main
+  ```
 2. **Fix issues** (follow Phase 3-5)
 3. **Commit**:
-   ```bash
-   git commit -m "fix(M{milestone}-{task}): {what was fixed}
+  ```bash
+  git commit -m "fix(M{milestone}-{task}): {what was fixed}
 
-   Addresses Code Review issues:
-   - {issue 1}
-   - {issue 2}
+  Addresses Code Review issues:
+  - {issue 1}
+  - {issue 2}
    
-   Task: {task title} (#{task_id})"
-   ```
-4. **Merge & cleanup** (Phase 8-9)
+  Task: {task title} (#{task_id})"
+  ```
+4. **Push main**:
+  ```bash
+  git push origin main
+  ```
 5. **No need to update task status** (already done)
 
 ### Key Principles
-- **One task = One feature branch** - Enables clean tracking and rollback
+- **One task = Direct main development** - No feature branches or PRs
 - **Self-review before commit** - Catch issues early
-- **PR review before merge** - Ensure quality through peer review
-- **Test before merge** - Ensure quality
-- **Immediate cleanup** - Keep repository tidy
+- **Local review report before delivery** - Ensure quality without PRs
+- **Test before push** - Keep main green
 - **Always include task_id** - Enable traceability
 - **Update vibe_kanban status** - Keep task board synchronized
 
 ### Common Mistakes to Avoid
-- ❌ Merging without PR review
-- ❌ Merging without self-review
-- ❌ Skipping tests
+- ❌ Creating feature branches or PRs
+- ❌ Skipping self-review or the local review report
+- ❌ Pushing without running tests
 - ❌ Forgetting to update task status
 - ❌ Not including request_id in logs/responses
 - ❌ Breaking dependency direction rules
 - ❌ Mixing feature work with unrelated changes
-- ❌ Leaving branches undeleted after merge
