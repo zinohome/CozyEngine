@@ -367,11 +367,20 @@
 - **Task ID**: 9151120e-00b9-45a7-8832-068b6e8fc5e0
 - **Priority**: P2
 - **依赖**: M3-2
-- **当前状态**: TODO
+- **当前状态**: DONE
+- **证据**:
+    - [backend/app/storage/queue.py](backend/app/storage/queue.py)
+    - [backend/app/services/worker.py](backend/app/services/worker.py)
+    - [backend/tests/test_async_queue.py](backend/tests/test_async_queue.py)
 
 **DoD**
-- [ ] 异步队列/重试/回压策略
-- [ ] 关键指标可观测
+- [x] 异步队列/重试/回压策略 (Redis Queue + Backoff)
+- [x] 关键指标可观测 (Logs enabled)
+
+**执行记录**
+- 2026-02-13：实现 TaskQueueService (Redis List) 与 AsyncWorkerService。
+- 2026-02-13：Memobase 与 Mem0 引擎集成异步写回逻辑。
+- 2026-02-13：增加单元测试覆盖队列与 Worker 逻辑。
 
 ---
 

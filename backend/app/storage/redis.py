@@ -86,4 +86,8 @@ class RedisManager:
         return self._redis
 
 
+    def get_client(self) -> aioredis.Redis | None:
+        """Get Redis client instance."""
+        return self.client
+
 redis_manager = RedisManager()

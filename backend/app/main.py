@@ -25,6 +25,7 @@ from app.observability import configure_logging, get_logger
 from app.orchestration import initialize_orchestrator
 from app.storage.database import db_manager
 from app.storage.redis import redis_manager
+from app.services.worker import async_worker
 
 # Initialize configuration
 try:
@@ -68,11 +69,17 @@ async def lifespan(app: FastAPI):
     # Initialize orchestrator
     orchestrator = await initialize_orchestrator(personality_registry, engine_registry)
     logger.info("ChatOrchestrator initialized")
+
+    # Start Background Worker (Async Write-back)
+    await async_worker.start()
     
     yield
     
     # Shutdown
     logger.info("Shutting down CozyEngine...")
+    
+    # Stop Background Worker
+    await async_worker.stop()
     
     # Close all engines
     await engine_registry.close_all()

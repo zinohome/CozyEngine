@@ -5,6 +5,7 @@ from typing import Any
 from app.engines.base_remote import BaseRemoteEngine
 from app.engines.user_profile import UserProfileEngine, UserProfileResult
 from app.observability.logging import get_logger
+from app.storage.queue import task_queue
 
 logger = get_logger(__name__)
 
@@ -14,6 +15,7 @@ class MemobaseUserProfileEngine(BaseRemoteEngine, UserProfileEngine):
 
     def __init__(self, api_url: str, api_token: str, timeout: float = 3.0):
         super().__init__(base_url=api_url, api_key=api_token, timeout=timeout)
+        self.queue_name = "cozy:queue:profile_updates"
 
     async def initialize(self) -> None:
         """Initialize HTTP client."""
@@ -61,17 +63,26 @@ class MemobaseUserProfileEngine(BaseRemoteEngine, UserProfileEngine):
         return result
 
     async def update_profile(self, user_id: str, messages: list[dict]) -> bool:
-        """Update user profile in Memobase."""
+        """Update user profile asynchronously via queue."""
+        payload = {
+            "type": "update_profile",
+            "user_id": user_id,
+            "messages": messages,
+            "timestamp": "iso-time-placeholder" # todo
+        }
+        return await task_queue.enqueue(self.queue_name, payload)
 
+    async def _perform_update(self, payload: dict) -> bool:
+        """Actual update logic executed by worker."""
+        user_id = payload.get("user_id")
+        messages = payload.get("messages")
+        
         async def _call():
-            payload = {
-                "user_id": user_id,
-                "messages": messages,
-            }
-            # Assuming standard update endpoint (async supported by memobase usually via queue but here synchronous trigger)
-            resp = await self.client.post("/profile/update", json=payload)
+            data = {"user_id": user_id, "messages": messages}
+            resp = await self.client.post("/profile/update", json=data)
             resp.raise_for_status()
             return True
 
+        # Use safe_call (circuit breaker) but no cache needed for write
         result = await self._safe_call(_call)
-        return result if result is not None else False
+        return result is True

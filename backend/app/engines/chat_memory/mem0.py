@@ -5,6 +5,7 @@ from typing import Any
 from app.engines.base_remote import BaseRemoteEngine
 from app.engines.chat_memory import ChatMemoryEngine, MemoryItem
 from app.observability.logging import get_logger
+from app.storage.queue import task_queue
 
 logger = get_logger(__name__)
 
@@ -14,6 +15,7 @@ class Mem0ChatMemoryEngine(BaseRemoteEngine, ChatMemoryEngine):
 
     def __init__(self, api_url: str, api_token: str, timeout: float = 3.0):
         super().__init__(base_url=api_url, api_key=api_token, timeout=timeout)
+        self.queue_name = "cozy:queue:memory_updates"
 
     async def initialize(self) -> None:
         """Initialize HTTP client."""
@@ -91,16 +93,31 @@ class Mem0ChatMemoryEngine(BaseRemoteEngine, ChatMemoryEngine):
         session_id: str,
         messages: list[dict],
     ) -> list[str]:
-        """Add chat memory to Mem0."""
+        """Add chat memory via queue (Async Write-back)."""
+        payload = {
+            "type": "add_memory",
+            "user_id": user_id,
+            "session_id": session_id,
+            "messages": messages,
+        }
+        enqueued = await task_queue.enqueue(self.queue_name, payload)
+        # Return empty list or fake ID since it's async
+        return ["async-pending"] if enqueued else []
+
+    async def _perform_add(self, payload: dict) -> list[str]:
+        """Actual add memory logic executed by worker."""
+        user_id = payload.get("user_id")
+        session_id = payload.get("session_id")
+        messages = payload.get("messages")
 
         async def _call():
-            payload = {
+            data = {
                 "user_id": user_id,
                 "session_id": session_id,
                 "messages": messages,
             }
             # Assuming standard memory add endpoint
-            resp = await self.client.post("/v1/memories/add", json=payload)
+            resp = await self.client.post("/v1/memories/add", json=data)
             resp.raise_for_status()
             data = resp.json()
             return data.get("ids", []) if "ids" in data else [data.get("id")] if "id" in data else []
