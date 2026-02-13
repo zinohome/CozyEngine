@@ -1,15 +1,7 @@
 {
-  "mcpServers": {
-    "vibe_kanban": {
-      "command": "/Users/zhangjun/.nvm/versions/node/v24.11.0/bin/npx",
-      "args": [
-        "-y",
-        "vibe-kanban@latest",
-        "--mcp"
-      ]
-    }
-  },
   "chat.tools.terminal.autoApprove": {
-    "git -C /config/CozyProjects/CozyEngine": true
+    "git -C /config/CozyProjects/CozyEngine": true,
+    "pytest": true,
+    ".": true
   }
 }

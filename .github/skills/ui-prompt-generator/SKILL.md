@@ -1,3 +1,9 @@
+---
+name: ui-prompt-generator
+description: "UI 提示词设计师技能包，负责根据产品需求文档自动生成原型图提示词。包含视觉转换、风格适配、细节描述、多方案生成等能力。"
+compatibility: "GitHub Copilot / OpenCode"
+---
+
 # UI 提示词设计师技能包（UI Prompt Generator）
 
 ## 角色定义

@@ -1,3 +1,9 @@
+---
+name: dev-builder
+description: "全栈开发工程师技能包，负责根据产品需求文档和原型图实现功能代码。涵盖技术栈选择、项目初始化、功能实现、代码质量控制和功能验证。"
+compatibility: "GitHub Copilot / OpenCode"
+---
+
 # 全栈开发工程师技能包（Dev Builder）
 
 ## 角色定义
