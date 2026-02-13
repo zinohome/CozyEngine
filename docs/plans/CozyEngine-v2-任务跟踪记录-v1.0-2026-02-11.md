@@ -412,12 +412,14 @@
 - **Task ID**: 16fba181-09ca-4d8e-9057-8d013373c8de
 - **Priority**: P2
 - **依赖**: M4-1
-- **当前状态**: TODO
+- **当前状态**: IN_PROGRESS (Code Sketch)
 - **证据**:
     - [docs/adr/ADR-0012-基于-FastRTC-的实时语音对话实现方案-v1.0-2026-02-13.md](docs/adr/ADR-0012-基于-FastRTC-的实时语音对话实现方案-v1.0-2026-02-13.md)
+    - [backend/app/realtime/handler.py](backend/app/realtime/handler.py)
 
 **执行记录**
-- 2026-02-13：架构师完成技术选型与 ADR 编写。开发团队回归 M3 优先级，暂缓 M4 实施。
+- 2026-02-13：架构师完成技术选型与 ADR 编写。
+- 2026-02-13：引入 FastRTC/Gradio 依赖并搭建 Handler 框架。MP3 解码依赖待确认。
 
 ---
 
