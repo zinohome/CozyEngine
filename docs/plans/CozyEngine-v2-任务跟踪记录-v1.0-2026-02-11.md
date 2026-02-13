@@ -341,7 +341,7 @@
 - **Task ID**: 7324c39e-1135-4a74-8624-95c82b9e0588
 - **Priority**: P2
 - **依赖**: M3-1
-- **当前状态**: TODO（当前 registry 返回 Null* 引擎，未接入远端 provider）
+- **当前状态**: IN_PROGRESS
 - **证据**:
   - [backend/app/engines/registry.py](backend/app/engines/registry.py)
 
@@ -352,6 +352,7 @@
 
 **执行记录**
 - 2026-02-11：未开始（以 Null 引擎为证据）。
+- 2026-02-13：开始实现远程客户端引擎，首选接入 Mem0/Memobase 接口。
 
 ---
 
@@ -384,12 +385,12 @@
 - **Task ID**: 16fba181-09ca-4d8e-9057-8d013373c8de
 - **Priority**: P2
 - **依赖**: M4-1
-- **当前状态**: IN_PROGRESS
+- **当前状态**: TODO
 - **证据**:
     - [docs/adr/ADR-0012-基于-FastRTC-的实时语音对话实现方案-v1.0-2026-02-13.md](docs/adr/ADR-0012-基于-FastRTC-的实时语音对话实现方案-v1.0-2026-02-13.md)
 
 **执行记录**
-- 2026-02-13：架构师完成技术选型与 ADR 编写，决定采用 FastRTC 替代自研 WebRTC 状态机，预计可节省 10-12 人天工作量。
+- 2026-02-13：架构师完成技术选型与 ADR 编写。开发团队回归 M3 优先级，暂缓 M4 实施。
 
 ---
 
