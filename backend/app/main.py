@@ -22,6 +22,7 @@ from app.middleware import (
     ErrorHandlerMiddleware,
     RateLimitMiddleware,
     RequestContextMiddleware,
+    SecurityHeadersMiddleware
 )
 from app.observability import configure_logging, get_logger
 from app.orchestration import initialize_orchestrator
@@ -141,10 +142,16 @@ async def validation_exception_handler(
 # 1. Request context (outermost - sets request_id)
 app.add_middleware(RequestContextMiddleware)
 
-# 2. Error handler (catches all exceptions)
+# 2. Security Headers (before ErrorHandler, ensuring headers on errors too if possible, but ErrorHandler returns JSONResponse which might need headers manually. 
+# Actually, Starlette BaseHTTPMiddleware runs around call_next.
+# SecurityMiddleware should wrap ErrorHandler so its headers apply to Error responses too?
+# Order: RequestContext -> SecurityHeaders -> ErrorHandler -> RateLimit
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 3. Error handler (catches all exceptions)
 app.add_middleware(ErrorHandlerMiddleware)
 
-# 3. Rate limiting
+# 4. Rate limiting
 app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 
 # 4. CORS middleware (innermost - closest to routes)

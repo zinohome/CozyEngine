@@ -447,7 +447,13 @@
 - **Task ID**: 2d946c5e-1d7e-4dc2-9e89-d759356a3fad
 - **Priority**: P2
 - **依赖**: M5-1
-- **当前状态**: TODO
+- **当前状态**: DONE
+- **证据**:
+  - [backend/verify_compat_m5_2.py](backend/verify_compat_m5_2.py)
+  - [docs/reports/M5-2-兼容性差异分析报告-v1.0.md](docs/reports/M5-2-兼容性差异分析报告-v1.0.md)
+- **执行记录**:
+  - 2026-02-13：编写并执行了 verify_compat_m5_2.py 脚本。
+  - 2026-02-13：输出了兼容性报告，确认 Session 接口完全兼容，Personality Tools 结构有微调风险。
 
 ---
 
@@ -476,7 +482,13 @@
 - **Task ID**: 7ddccbff-1724-4b09-ba17-72fb162d670d
 - **Priority**: P3
 - **依赖**: M5-3
-- **当前状态**: TODO
+- **当前状态**: DONE
+- **证据**:
+  - [backend/app/middleware/security.py](backend/app/middleware/security.py) (SecurityHeadersMiddleware)
+  - [backend/app/main.py](backend/app/main.py) (Registered)
+- **执行记录**:
+  - 2026-02-13：添加了安全中间件，强制 HTTP 安全头 (HSTS, Content-Type-Options, Frame-Options, CSP, Referrer, Permissions)。
+  - 2026-02-13：集成到主应用并验证通过。
 
 ---
 
