@@ -391,7 +391,19 @@
 - **Task ID**: 692d6da7-d113-43de-bead-f397cb68c196
 - **Priority**: P2
 - **依赖**: M1-2
-- **当前状态**: TODO
+- **当前状态**: DONE
+- **证据**:
+    - [backend/app/engines/voice/__init__.py](backend/app/engines/voice/__init__.py)
+    - [backend/app/api/v1/voice.py](backend/app/api/v1/voice.py)
+
+**DoD**
+- [x] STT/TTS HTTP 端点实现
+- [x] TTS 流式输出 (StreamingResponse)
+- [x] OpenAI 引擎集成
+
+**执行记录**
+- 2026-02-13：完成 Voice 引擎基础设施与 OpenAI 实现。
+- 2026-02-13：发布 /api/v1/audio 路由。
 
 ---
 
