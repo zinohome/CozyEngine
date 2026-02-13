@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.health import router as health_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.personalities import router as personalities_router
+from app.api.v1.voice import router as voice_router
 from app.core.config import Config, ConfigurationError, get_config
 from app.core.exceptions import ErrorDetail, ErrorResponse
 from app.core.personalities import PersonalityLoader, PersonalityRegistry, initialize_personality_registry
@@ -159,6 +160,7 @@ if config.app.cors.enabled:
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api")
 app.include_router(personalities_router, prefix="/api")
+app.include_router(voice_router, prefix="/api/v1") # Mounts at /api/v1/audio/...
 
 
 @app.get("/")

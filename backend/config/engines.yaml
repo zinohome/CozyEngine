@@ -57,3 +57,22 @@ engines:
     enabled: true
     timeout: 30.0
     max_iterations: 5
+
+  # Voice Engines (M4)
+  voice:
+    stt:
+      enabled: true
+      default_provider: "openai"
+      providers:
+        openai:
+          model: "whisper-1"
+          timeout: 10.0
+    tts:
+      enabled: true
+      default_provider: "openai"
+      providers:
+        openai:
+          model: "tts-1"
+          voice: "alloy"
+          response_format: "mp3"
+          timeout: 10.0

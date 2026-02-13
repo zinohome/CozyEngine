@@ -11,6 +11,9 @@ from app.engines.knowledge import KnowledgeEngine, NullKnowledgeEngine
 from app.engines.knowledge.cognee import CogneeKnowledgeEngine
 from app.engines.user_profile import NullUserProfileEngine, UserProfileEngine
 from app.engines.user_profile.memobase import MemobaseUserProfileEngine
+from app.engines.voice import STTEngine, TTSEngine
+from app.engines.voice.stt.openai import OpenAISTTEngine
+from app.engines.voice.tts.openai import OpenAITTSEngine
 from app.observability.logging import get_logger
 
 logger = get_logger(__name__)
@@ -28,6 +31,12 @@ class EngineRegistry:
         self._user_profile_locks: dict[str, asyncio.Lock] = {}
         self._chat_memory_engines: dict[str, ChatMemoryEngine] = {}
         self._chat_memory_locks: dict[str, asyncio.Lock] = {}
+        
+        # Voice Engines
+        self._stt_engines: dict[str, STTEngine] = {}
+        self._stt_locks: dict[str, asyncio.Lock] = {}
+        self._tts_engines: dict[str, TTSEngine] = {}
+        self._tts_locks: dict[str, asyncio.Lock] = {}
 
     async def get_or_create(self, engine_type: str, config: dict[str, Any]) -> AIEngine:
         """获取或创建引擎实例"""
@@ -184,6 +193,70 @@ class EngineRegistry:
             )
 
         return NullChatMemoryEngine()
+
+    async def get_or_create_stt(
+        self, engine_type: str, config: dict[str, Any]
+    ) -> STTEngine | None:
+        """Get or create STT engine."""
+        if engine_type not in self._stt_locks:
+            self._stt_locks[engine_type] = asyncio.Lock()
+
+        async with self._stt_locks[engine_type]:
+            if engine_type in self._stt_engines:
+                return self._stt_engines[engine_type]
+
+            engine = self._create_stt_engine(engine_type, config)
+            if engine:
+                self._stt_engines[engine_type] = engine
+                logger.info("STT engine created and cached", engine_type=engine_type)
+            return engine
+
+    async def get_or_create_tts(
+        self, engine_type: str, config: dict[str, Any]
+    ) -> TTSEngine | None:
+        """Get or create TTS engine."""
+        if engine_type not in self._tts_locks:
+            self._tts_locks[engine_type] = asyncio.Lock()
+
+        async with self._tts_locks[engine_type]:
+            if engine_type in self._tts_engines:
+                return self._tts_engines[engine_type]
+
+            engine = self._create_tts_engine(engine_type, config)
+            if engine:
+                self._tts_engines[engine_type] = engine
+                logger.info("TTS engine created and cached", engine_type=engine_type)
+            return engine
+
+    def _create_stt_engine(self, engine_type: str, config: dict[str, Any]) -> STTEngine | None:
+        """Create STT engine implementation."""
+        if engine_type == "openai":
+            api_key = get_config().secrets.openai_api_key
+            if not api_key:
+                logger.warning("OpenAI API key missing, STT disabled")
+                return None
+            return OpenAISTTEngine(
+                api_key=api_key.get_secret_value(),
+                model=config.get("model", "whisper-1"),
+                timeout=config.get("timeout", 10.0),
+            )
+        return None
+
+    def _create_tts_engine(self, engine_type: str, config: dict[str, Any]) -> TTSEngine | None:
+        """Create TTS engine implementation."""
+        if engine_type == "openai":
+            api_key = get_config().secrets.openai_api_key
+            if not api_key:
+                logger.warning("OpenAI API key missing, TTS disabled")
+                return None
+            return OpenAITTSEngine(
+                api_key=api_key.get_secret_value(),
+                model=config.get("model", "tts-1"),
+                voice=config.get("voice", "alloy"),
+                response_format=config.get("response_format", "mp3"),
+                timeout=config.get("timeout", 10.0),
+            )
+        return None
 
     async def get(self, engine_type: str) -> AIEngine | None:
         """获取已缓存的引擎"""
