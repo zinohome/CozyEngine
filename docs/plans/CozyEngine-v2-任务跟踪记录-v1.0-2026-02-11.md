@@ -52,11 +52,12 @@
 
 ### 2.2 已发现的缺口/风险（用于后续任务拆解）
 
-- Orchestrator 的消息持久化函数仍为 TODO（影响 M1-2 与 M0-4 的“消息写入 DB”验收）。
-  - 证据：[backend/app/orchestration/chat.py](backend/app/orchestration/chat.py)
-- OpenAI provider 使用 `openai` SDK，但依赖清单未包含 `openai`（会导致运行期缺包风险）。
-  - 证据：[backend/pyproject.toml](backend/pyproject.toml)，[backend/app/engines/ai/__init__.py](backend/app/engines/ai/__init__.py)
+- **已修复**：Orchestrator 的部分消息持久化逻辑。
+  - 证据：[backend/app/orchestration/chat.py](backend/app/orchestration/chat.py#L475)
+- **已修复**：OpenAI provider 依赖缺失。
+  - 证据：[backend/pyproject.toml](backend/pyproject.toml)
 - CozyChat 兼容层端点未在 `app/api/compat/*` 看到对应实现（M5 系列大概率未开始）。
+- **已解决**：Realtime 实现路径不明确风险。已通过 [ADR-0012](docs/adr/ADR-0012-基于-FastRTC-方案) 确定方案。
 
 ---
 
@@ -117,6 +118,7 @@
 
 **下一步**
 - 在实际部署环境跑一次“缺失密钥失败”与“完整配置成功”的演练，并把输出粘贴到执行记录中。
+- 2026-02-13 更新：已确认 `pyproject.toml` 中的 `openai` 依赖已补齐。
 
 ---
 
@@ -172,7 +174,8 @@
 - 2026-02-11：补齐 Orchestrator 消息持久化与会话创建逻辑。
 
 **下一步**
-- 在执行 M1-2 时一并补齐“会话/消息/审计事件”的写入逻辑，并在此处补充证据与验收记录。
+- 在执行 M4-2 时一并补齐“会话/消息/审计事件”的写入逻辑，并在此处补充证据与验收记录。
+- 2026-02-13 更新：已实现 `_persist_message` 中的真实 DB 写入与 `session` 表关联记录。
 
 ---
 
@@ -251,7 +254,7 @@
 - 2026-02-11：补齐 `openai` 依赖与模型配置透传。
 
 **下一步**
-- 在执行该任务时补齐依赖声明、provider/model 白名单与缓存命中证据。
+- 2026-02-13 更新：已补齐 `openai` 依赖，并支持按 `provider` + `model` 缓存单例 client。
 
 ---
 
@@ -381,7 +384,12 @@
 - **Task ID**: 16fba181-09ca-4d8e-9057-8d013373c8de
 - **Priority**: P2
 - **依赖**: M4-1
-- **当前状态**: TODO
+- **当前状态**: IN_PROGRESS
+- **证据**:
+    - [docs/adr/ADR-0012-基于-FastRTC-的实时语音对话实现方案-v1.0-2026-02-13.md](docs/adr/ADR-0012-基于-FastRTC-的实时语音对话实现方案-v1.0-2026-02-13.md)
+
+**执行记录**
+- 2026-02-13：架构师完成技术选型与 ADR 编写，决定采用 FastRTC 替代自研 WebRTC 状态机，预计可节省 10-12 人天工作量。
 
 ---
 
@@ -451,7 +459,7 @@
 
 ### 4.2 ADR 索引
 
-- （执行期补充）
+- [ADR-0012: 基于 FastRTC 的实时语音对话实现方案](docs/adr/ADR-0012-基于-FastRTC-的实时语音对话实现方案-v1.0-2026-02-13.md)
 
 ---
 
