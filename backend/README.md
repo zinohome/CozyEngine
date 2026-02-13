@@ -26,30 +26,33 @@ backend/
 ### Prerequisites
 
 - Python 3.11+
-- [uv](https://github.com/astral-sh/uv) or pip
+- pip
 
 ### Installation
 
-#### Using uv (recommended)
+#### One-command setup (recommended)
+
+Creates `backend/venv` (if missing) and installs dependencies.
 
 ```bash
-# Install uv if you haven't
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Create virtual environment and install dependencies
 cd backend
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e ".[dev]"
+./scripts/setup_venv.sh
 ```
 
-#### Using pip
+Runtime-only install (no dev tools like pytest/ruff/pyright):
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+./scripts/setup_venv.sh --prod
+```
+
+#### Manual (pip)
+
+```bash
+cd backend
+python3 -m venv venv
+./venv/bin/python -m pip install --upgrade pip setuptools wheel
+./venv/bin/python -m pip install -e ".[dev]"
 ```
 
 ### Configuration
@@ -66,10 +69,7 @@ vim .env
 
 ```bash
 # Development server with auto-reload
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Or using Python
-python -m uvicorn app.main:app --reload
+./venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:
@@ -81,16 +81,16 @@ The API will be available at:
 
 ```bash
 # Run all tests
-pytest
+./venv/bin/python -m pytest
 
 # Run with coverage
-pytest --cov=app --cov-report=html
+./venv/bin/python -m pytest --cov=app --cov-report=html
 
 # Run specific test file
-pytest tests/test_example.py
+./venv/bin/python -m pytest tests/test_example.py
 
 # Run with verbose output
-pytest -v
+./venv/bin/python -m pytest -v
 ```
 
 ## 🔍 Code Quality
@@ -99,27 +99,27 @@ pytest -v
 
 ```bash
 # Check code style
-ruff check .
+./venv/bin/python -m ruff check .
 
 # Auto-fix issues
-ruff check --fix .
+./venv/bin/python -m ruff check --fix .
 
 # Format code
-ruff format .
+./venv/bin/python -m ruff format .
 ```
 
 ### Type Checking
 
 ```bash
 # Run type checker
-pyright
+./venv/bin/python -m pyright
 ```
 
 ### All Checks
 
 ```bash
 # Run all quality checks
-ruff check . && ruff format --check . && pyright && pytest -q
+./venv/bin/python -m ruff check . && ./venv/bin/python -m ruff format --check . && ./venv/bin/python -m pyright && ./venv/bin/python -m pytest -q
 ```
 
 ## 📦 Dependencies

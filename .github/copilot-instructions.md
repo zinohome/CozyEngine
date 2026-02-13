@@ -20,6 +20,14 @@
 - SSE responses must follow OpenAI delta format and end with [DONE].
 - Tools must be gated by whitelist + permission checks + audit logging; limit tool-call loops.
 
+## Python 虚拟环境（后端）
+- 如果后端项目是 Python（存在 backend/pyproject.toml 或 backend/requirements.txt），必须优先使用 backend/venv 作为虚拟环境目录（不是全局 Python，也不要依赖系统 site-packages）。
+- 每次进行任何 Python 相关操作（运行/测试/格式化/安装依赖）前，先检查 backend/venv 是否存在；不存在则创建：python3 -m venv backend/venv。
+- 依赖安装规则：
+  - 存在 backend/pyproject.toml：使用 backend/venv/bin/python -m pip install -e ".[dev]"（需要测试/ruff/pyright 时）；仅运行服务可用 -e .。
+  - 存在 backend/requirements.txt：使用 backend/venv/bin/python -m pip install -r requirements.txt。
+- 调用 Python / pytest / ruff 时，必须使用 backend/venv/bin/python（或 venv 激活后的等价命令），避免混用不同解释器导致不可复现。
+
 ## Documentation and ADR workflow
 - Design docs in docs/engine-v2/ are authoritative. If implementation deviates, update the original design doc first and bump its version/date.
 - Document naming must include version and date: ...-vX.Y-YYYY-MM-DD.md.
