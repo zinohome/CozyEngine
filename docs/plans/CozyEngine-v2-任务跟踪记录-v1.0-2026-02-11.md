@@ -430,7 +430,15 @@
 - **Task ID**: 7958e8aa-4680-44f9-a726-4a4a6b7e2d7a
 - **Priority**: P2
 - **依赖**: M1-2 + M2-1
-- **当前状态**: TODO（未看到 compat 路由实现）
+- **当前状态**: DONE
+- **证据**:
+  - [backend/app/api/compat](backend/app/api/compat)
+  - [backend/app/api/compat/router.py](backend/app/api/compat/router.py)
+  - [backend/app/main.py](backend/app/main.py)
+- **执行记录**:
+  - 2026-02-13：实现了会话（/sessions）、人格（/personalities）、工具（/tools）兼容接口。
+  - 2026-02-13：集成 STT/TTS 接口别名。
+  - 2026-02-13：通过 pytest 验证兼容性路由（mock DB/Auth）。
 
 ---
 
