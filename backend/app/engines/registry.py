@@ -3,10 +3,14 @@
 import asyncio
 from typing import Any
 
+from app.core.config.manager import get_config
 from app.engines.ai import AIEngine, OpenAIProvider
 from app.engines.chat_memory import ChatMemoryEngine, NullChatMemoryEngine
+from app.engines.chat_memory.mem0 import Mem0ChatMemoryEngine
 from app.engines.knowledge import KnowledgeEngine, NullKnowledgeEngine
+from app.engines.knowledge.cognee import CogneeKnowledgeEngine
 from app.engines.user_profile import NullUserProfileEngine, UserProfileEngine
+from app.engines.user_profile.memobase import MemobaseUserProfileEngine
 from app.observability.logging import get_logger
 
 logger = get_logger(__name__)
@@ -116,21 +120,69 @@ class EngineRegistry:
         self, engine_type: str, config: dict[str, Any]
     ) -> KnowledgeEngine:
         """根据类型创建知识引擎"""
-        _ = config
+        if engine_type == "cognee":
+            settings = get_config().settings
+            api_url = settings.cognee_api_url
+            api_token = settings.cognee_api_token
+            timeout = config.get("timeout", 5.0)
+
+            if not api_url or not api_token:
+                logger.warning("Cognee config missing, falling back to NullEngine", engine="cognee")
+                return NullKnowledgeEngine()
+
+            return CogneeKnowledgeEngine(
+                api_url=api_url,
+                api_token=api_token.get_secret_value(),
+                timeout=timeout,
+            )
+
         return NullKnowledgeEngine()
 
     def _create_user_profile_engine(
         self, engine_type: str, config: dict[str, Any]
     ) -> UserProfileEngine:
         """根据类型创建用户画像引擎"""
-        _ = config
+        if engine_type == "memobase":
+            settings = get_config().settings
+            # Assuming memobase uses project_url as base_url
+            api_url = settings.memobase_project_url
+            api_token = settings.memobase_api_key
+            timeout = config.get("timeout", 3.0)
+
+            if not api_url or not api_token:
+                logger.warning(
+                    "Memobase config missing, falling back to NullEngine", engine="memobase"
+                )
+                return NullUserProfileEngine()
+
+            return MemobaseUserProfileEngine(
+                api_url=api_url,
+                api_token=api_token.get_secret_value(),
+                timeout=timeout,
+            )
+
         return NullUserProfileEngine()
 
     def _create_chat_memory_engine(
         self, engine_type: str, config: dict[str, Any]
     ) -> ChatMemoryEngine:
         """根据类型创建聊天记忆引擎"""
-        _ = config
+        if engine_type == "mem0":
+            settings = get_config().settings
+            api_url = settings.mem0_api_url
+            api_token = settings.mem0_api_key
+            timeout = config.get("timeout", 3.0)
+
+            if not api_url or not api_token:
+                logger.warning("Mem0 config missing, falling back to NullEngine", engine="mem0")
+                return NullChatMemoryEngine()
+
+            return Mem0ChatMemoryEngine(
+                api_url=api_url,
+                api_token=api_token.get_secret_value(),
+                timeout=timeout,
+            )
+
         return NullChatMemoryEngine()
 
     async def get(self, engine_type: str) -> AIEngine | None:

@@ -24,6 +24,7 @@ from app.middleware import (
 from app.observability import configure_logging, get_logger
 from app.orchestration import initialize_orchestrator
 from app.storage.database import db_manager
+from app.storage.redis import redis_manager
 
 # Initialize configuration
 try:
@@ -52,6 +53,13 @@ async def lifespan(app: FastAPI):
     # Initialize database
     db_manager.initialize()
     logger.info("Database connection pool initialized")
+
+    # Initialize Redis
+    await redis_manager.initialize()
+    if redis_manager.client:
+        logger.info("Redis connection initialized")
+    else:
+        logger.warning("Redis connection failed or disabled")
     
     # Initialize personality registry
     personality_registry = initialize_personality_registry()
@@ -70,6 +78,10 @@ async def lifespan(app: FastAPI):
     await engine_registry.close_all()
     logger.info("All engines closed")
     
+    # Close Redis
+    await redis_manager.close()
+    logger.info("Redis connection closed")
+
     # Close database
     await db_manager.close()
     logger.info("Database connection pool closed")

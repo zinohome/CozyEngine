@@ -341,18 +341,24 @@
 - **Task ID**: 7324c39e-1135-4a74-8624-95c82b9e0588
 - **Priority**: P2
 - **依赖**: M3-1
-- **当前状态**: IN_PROGRESS
+- **当前状态**: REVIEW
 - **证据**:
+  - [backend/app/engines/base_remote.py](backend/app/engines/base_remote.py)
   - [backend/app/engines/registry.py](backend/app/engines/registry.py)
+  - [backend/tests/test_personalization_engines.py](backend/tests/test_personalization_engines.py)
 
 **DoD**
-- [ ] provider 接入（Cognee/Memobase/Mem0 等）
-- [ ] 统一超时、错误分类、健康检查
-- [ ] 熔断与多级缓存（L1/L2）
+- [x] provider 接入（Cognee/Memobase/Mem0 等）
+- [x] 统一超时、错误分类、健康检查
+- [x] 熔断与多级缓存（L1/L2）
 
 **执行记录**
 - 2026-02-11：未开始（以 Null 引擎为证据）。
 - 2026-02-13：开始实现远程客户端引擎，首选接入 Mem0/Memobase 接口。
+- 2026-02-13：完成 BaseRemoteEngine 实现（集成 CircuitBreaker、L1/L2 缓存）。
+- 2026-02-13：完成 Cognee/Memobase/Mem0 子类实现与 Registry 注册。
+- 2026-02-13：集成 Redis 作为 L2 缓存。
+- 2026-02-13：单元测试通过（验证熔断、降级与缓存逻辑）。
 
 ---
 
