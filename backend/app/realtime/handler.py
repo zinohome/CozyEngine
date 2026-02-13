@@ -3,9 +3,10 @@
 import io
 import asyncio
 import numpy as np
+import scipy.io.wavfile as wavfile
 from typing import AsyncGenerator, Tuple, Any
+from pydub import AudioSegment
 
-# fastrtc imports might vary, assuming standard usage based on gradio's stream
 from fastrtc import ReplyOnPause, Stream, AdditionalOutputs
 import gradio as gr
 
@@ -15,25 +16,19 @@ from app.observability.logging import get_logger
 
 logger = get_logger(__name__)
 
-# FastRTC helper to save audio
-def save_audio_to_bytes(sample_rate: int, audio_data: np.ndarray) -> io.BytesIO:
-    import scipy.io.wavfile as wavfile
-    buffer = io.BytesIO()
-    # Normalize if needed, assume float32 if not specified
-    wavfile.write(buffer, sample_rate, audio_data)
-    buffer.seek(0)
-    return buffer
-
 class RealtimeVoiceHandler:
     """Handles realtime voice interactions."""
 
     async def handle_stream(self, audio: Tuple[int, np.ndarray]) -> AsyncGenerator[Tuple[int, np.ndarray], None]:
         """
         Process audio stream:
-        1. STT
+        1. STT (Speech to Text)
         2. Orchestrator Chat
-        3. TTS -> Audio Stream
+        3. TTS (Text to Speech) -> Audio Stream
         """
+        if not audio:
+            return
+
         sample_rate, audio_data = audio
         
         # 1. Transcribe (STT)
@@ -42,29 +37,40 @@ class RealtimeVoiceHandler:
             logger.error("STT Engine not available")
             return
             
-        audio_buffer = save_audio_to_bytes(sample_rate, audio_data)
+        # Convert numpy array to WAV bytes for OpenAI
+        audio_buffer = io.BytesIO()
         try:
-            # Assume default filename works
-            text = await stt_engine.transcribe(audio_buffer, filename="input.wav")
-            logger.info(f"Transcribed: {text}")
+            wavfile.write(audio_buffer, sample_rate, audio_data)
+            audio_buffer.seek(0)
         except Exception as e:
-            logger.error(f"STT failed: {e}")
+            logger.error("Failed to convert audio to wav", error=str(e))
+            return
+        
+        text = ""
+        try:
+            # We use a mocked filename to hint format to OpenAI if needed
+            text = await stt_engine.transcribe(audio_buffer, filename="input.wav")
+            logger.info("Transcribed audio", text=text)
+        except Exception as e:
+            logger.error("STT failed", error=str(e))
             return
 
-        if not text.strip():
+        if not text or not text.strip():
             return
 
         # 2. Chat (Orchestrator)
         orchestrator = get_orchestrator()
-        # Mock session for now or derive from context if FastRTC supports headers override
-        # For simplicity, we use hardcoded "voice-session"
-        user_id = "voice-user"
-        session_id = "voice-session"
-        personality_id = "cozy-companion-base" # Default
+        if not orchestrator:
+            logger.error("Orchestrator not initialized")
+            return
 
+        # TODO: Retrieve user/session from context (e.g. headers if supported by FastRTC)
+        user_id = "realtime-user"
+        session_id = "realtime-session"
+        personality_id = "cozy-companion-base"
+
+        reply_text = ""
         try:
-            # We use non-streaming chat for simplicity in logic, 
-            # but ideally we stream text to TTS
             response = await orchestrator.chat(
                 user_id=user_id,
                 session_id=session_id,
@@ -72,9 +78,12 @@ class RealtimeVoiceHandler:
                 message=text
             )
             reply_text = response.get("content", "")
-            logger.info(f"Reply: {reply_text}")
+            logger.info("Chat reply", reply_text=reply_text)
         except Exception as e:
-            logger.error(f"Orchestration failed: {e}")
+            logger.error("Orchestration failed", error=str(e))
+            return
+
+        if not reply_text:
             return
 
         # 3. TTS (Text to Speech)
@@ -84,27 +93,30 @@ class RealtimeVoiceHandler:
              return
 
         try:
-            # We can yield chunks if TTS supports it and we can decode MP3 to PCM
-            # OpenAI TTS returns MP3. FastRTC expects (sample_rate, numpy_array).
-            # This requires pydub or ffmpeg to Decode MP3 to PCM on the fly.
-            # For iteration 1, we might just generate full audio and send it.
+            # Generate audio (MP3 by default from OpenAI)
+            audio_bytes = await tts_engine.generate(reply_text)
             
-            # Note: Decoding MP3 bytes to numpy array requires pydub/ffmpeg
-            # Assuming we have a helper or we just send it if FastRTC supports bytes?
-            # FastRTC Stream input/output is strictly (rate, numpy).
+            # Decode MP3/WAV to PCM using pydub
+            # FastRTC expects (sample_rate, numpy_array)
+            seg = AudioSegment.from_file(io.BytesIO(audio_bytes))
             
-            # Simple approach: Return nothing for now as we lack MP3 decoder in dependencies
-            # OR assume we install simple decoder.
-            pass
+            # Convert to numpy array of samples
+            # pydub stores as raw audio data, usually int16
+            samples = np.array(seg.get_array_of_samples())
+            
+            # Handle channels
+            if seg.channels == 2:
+                samples = samples.reshape((-1, 2))
+            
+            yield (seg.frame_rate, samples)
+            
         except Exception as e:
-             logger.error(f"TTS failed: {e}")
-             return
-
-        yield 24000, np.zeros((1, 1), dtype=np.int16) # Dummy yield
+             logger.error("TTS processing failed", error=str(e))
 
 # For FastRTC mounting
 stream = Stream(
     ReplyOnPause(RealtimeVoiceHandler().handle_stream),
     modality="audio", 
-    mode="send-receive"
+    mode="send-receive",
+    ui_args={"title": "CozyEngine Realtime Voice"}
 )

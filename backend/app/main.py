@@ -18,6 +18,7 @@ from app.core.config import Config, ConfigurationError, get_config
 from app.core.exceptions import ErrorDetail, ErrorResponse
 from app.core.personalities import PersonalityLoader, PersonalityRegistry, initialize_personality_registry
 from app.engines.registry import engine_registry
+from app.realtime.handler import stream as realtime_stream
 from app.middleware import (
     ErrorHandlerMiddleware,
     RateLimitMiddleware,
@@ -170,6 +171,12 @@ app.include_router(chat_router, prefix="/api")
 # app.include_router(personalities_router, prefix="/api")
 app.include_router(compat_router, prefix="/api/v1")
 app.include_router(voice_router, prefix="/api/v1") # Mounts at /api/v1/audio/...
+
+# Mount Realtime Voice (FastRTC/Gradio) - Default path usually /
+# Note: This might shadow root if not configured carefully. 
+# FastRTC allows configuring path in Stream or mount?
+# We assume it peacefully coexists or mounts at /gradio if fastrtc defaults apply.
+realtime_stream.mount(app)
 
 
 @app.get("/")
