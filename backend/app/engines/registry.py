@@ -4,7 +4,7 @@ import asyncio
 from typing import Any
 
 from app.core.config.manager import get_config
-from app.engines.ai import AIEngine, OpenAIProvider
+from app.engines.ai import AIEngine, MockProvider, OpenAIProvider
 from app.engines.chat_memory import ChatMemoryEngine, NullChatMemoryEngine
 from app.engines.chat_memory.mem0 import Mem0ChatMemoryEngine
 from app.engines.knowledge import KnowledgeEngine, NullKnowledgeEngine
@@ -68,6 +68,9 @@ class EngineRegistry:
             if not api_key:
                 raise ValueError("OpenAI API key is required")
             return OpenAIProvider(api_key=api_key, base_url=base_url, model=model)
+        
+        if engine_type == "mock":
+            return MockProvider()
 
         raise ValueError(f"Unknown engine type: {engine_type}")
 

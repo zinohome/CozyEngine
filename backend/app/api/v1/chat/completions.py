@@ -57,15 +57,15 @@ def parse_request_body(body: dict) -> ChatCompletionRequest:
 async def chat_completions(
     body: dict,
     request: Request,
-    user_id: str = Header(None),
-    session_id: str = Header(None),
+    user_id: str = Header(None, alias="X-User-Id"),
+    session_id: str = Header(None, alias="X-Session-Id"),
 ) -> Union[dict, StreamingResponse]:
     """
     聊天完成端点 (OpenAI 兼容)
 
     请求头:
-    - user_id: 用户 ID
-    - session_id: 会话 ID
+    - X-User-Id: 用户 ID
+    - X-Session-Id: 会话 ID
 
     请求体:
     {

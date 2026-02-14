@@ -153,7 +153,11 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(ErrorHandlerMiddleware)
 
 # 4. Rate limiting
-app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+if config.security.rate_limiting.enabled:
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests_per_minute=config.security.rate_limiting.requests_per_minute
+    )
 
 # 4. CORS middleware (innermost - closest to routes)
 if config.app.cors.enabled:

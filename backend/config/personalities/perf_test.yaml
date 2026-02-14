@@ -1,0 +1,23 @@
+id: perf_test
+name: Performance Test Assistant
+description: A mock assistant for performance testing
+system_prompt: |
+  You are a helpful assistant.
+
+ai:
+  provider: mock
+  model: mock-model
+  temperature: 0.7
+  max_tokens: 100
+  top_p: 1.0
+
+tools:
+  enabled: false
+  allowed_tools: []
+
+memory:
+  enabled: false
+
+metadata:
+  version: "1.0"
+  author: "CozyEngine QA"

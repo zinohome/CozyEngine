@@ -18,8 +18,8 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
 
         # 绑定可用的请求标识（来自 headers）
-        user_id = request.headers.get("user_id")
-        session_id = request.headers.get("session_id")
+        user_id = request.headers.get("X-User-Id") or request.headers.get("user-id")
+        session_id = request.headers.get("X-Session-Id") or request.headers.get("session-id")
         request.state.user_id = user_id
         request.state.session_id = session_id
 

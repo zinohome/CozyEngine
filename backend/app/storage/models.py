@@ -32,7 +32,7 @@ class User(Base):
 
     # 元数据
     user_metadata: Mapped[dict[str, Any]] = mapped_column(
-        JSON, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
     )
 
     # 时间戳
@@ -78,7 +78,7 @@ class Session(Base):
 
     # 会话元数据
     session_metadata: Mapped[dict[str, Any]] = mapped_column(
-        JSON, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
     )
 
     # 时间戳
@@ -133,7 +133,7 @@ class Message(Base):
 
     # 消息元数据
     message_metadata: Mapped[dict[str, Any]] = mapped_column(
-        JSON, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
     )
 
     # 时间戳
@@ -178,7 +178,7 @@ class AuditEvent(Base):
     # 事件信息
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(
-        JSON, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+        JSON, nullable=False, default=dict, server_default=text("'{}'")
     )
 
     # 时间戳

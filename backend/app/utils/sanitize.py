@@ -85,8 +85,7 @@ def _sanitize_value(value: str) -> str:
         return value
 
     for pattern in SENSITIVE_PATTERNS:
-        if pattern.search(value):
-            return MASK
+        value = pattern.sub(MASK, value)
 
     return value
 

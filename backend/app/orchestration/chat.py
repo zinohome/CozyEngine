@@ -549,6 +549,9 @@ class ChatOrchestrator:
         """获取引擎 API 密钥"""
         import os
 
+        if engine_type == "mock":
+            return "mock-key"
+
         if engine_type == "openai":
             return os.getenv("OPENAI_API_KEY", "")
         raise ValueError(f"Unknown engine type: {engine_type}")
@@ -556,6 +559,9 @@ class ChatOrchestrator:
     def _get_base_url(self, engine_type: str) -> str:
         """获取引擎 Base URL"""
         import os
+
+        if engine_type == "mock":
+            return "http://localhost/mock"
 
         if engine_type == "openai":
             # 如果未设置环境变量，使用默认 OpenAI URL

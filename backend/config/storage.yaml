@@ -13,7 +13,7 @@ storage:
     
   # Redis
   redis:
-    enabled: true
+    enabled: false
     max_connections: 50
     socket_timeout: 5.0
     socket_connect_timeout: 5.0

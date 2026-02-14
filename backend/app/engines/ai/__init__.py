@@ -234,3 +234,55 @@ class OpenAIProvider(AIEngine):
     def supports_vision(self) -> bool:
         """OpenAI 支持视觉"""
         return True
+
+
+class MockProvider(AIEngine):
+    """Mock 提供商 - 用于测试"""
+
+    def __init__(self, **kwargs):
+        self._initialized = False
+
+    async def initialize(self) -> None:
+        self._initialized = True
+
+    async def health_check(self) -> bool:
+        return True
+
+    async def close(self) -> None:
+        pass
+
+    async def chat(
+        self,
+        messages: list[ChatMessage],
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        top_p: float = 1.0,
+        tools: list[dict] | None = None,
+    ) -> ChatResponse:
+        return ChatResponse(
+            content="This is a mock response from the performance test harness.",
+            finish_reason="stop",
+            usage={"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
+        )
+
+    async def chat_stream(
+        self,
+        messages: list[ChatMessage],
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        top_p: float = 1.0,
+        tools: list[dict] | None = None,
+    ):
+        full_response = "This is a mock response from the performance test harness."
+        chunk_size = 5
+        for i in range(0, len(full_response), chunk_size):
+            yield {"content": full_response[i : i + chunk_size], "finish_reason": None}
+        yield {"content": "", "finish_reason": "stop"}
+
+    @property
+    def supports_tools(self) -> bool:
+        return True
+
+    @property
+    def supports_vision(self) -> bool:
+        return False

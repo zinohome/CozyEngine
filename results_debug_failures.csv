@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+POST,/api/v1/chat/completions (non-stream),"CatchResponseError('Failed with 500: {""error"":{""code"":""INTERNAL_ERROR"",""message"":""An internal error occurred"",""request_id"":""8b120ffe-367f-4829-8cd9-dd124950d6e2"",""details"":null}}')",1

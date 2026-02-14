@@ -31,6 +31,7 @@ class DatabaseManager:
             return
 
         url = database_url or os.getenv("DATABASE_URL")
+        print(f"DEBUG: initializing DB with URL: {url}, CWD: {os.getcwd()}")
         if not url:
             msg = "DATABASE_URL not configured"
             raise ValueError(msg)
@@ -39,13 +40,16 @@ class DatabaseManager:
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-        self._engine = create_async_engine(
-            url,
-            echo=os.getenv("DATABASE_ECHO", "false").lower() == "true",
-            pool_size=int(os.getenv("DATABASE_POOL_SIZE", "10")),
-            max_overflow=int(os.getenv("DATABASE_MAX_OVERFLOW", "20")),
-            pool_pre_ping=True,  # 连接池健康检查
-        )
+        engine_kwargs = {
+            "echo": os.getenv("DATABASE_ECHO", "false").lower() == "true",
+            "pool_pre_ping": True,
+        }
+
+        if not url.startswith("sqlite"):
+            engine_kwargs["pool_size"] = int(os.getenv("DATABASE_POOL_SIZE", "10"))
+            engine_kwargs["max_overflow"] = int(os.getenv("DATABASE_MAX_OVERFLOW", "20"))
+
+        self._engine = create_async_engine(url, **engine_kwargs)
 
         self._session_factory = async_sessionmaker(
             self._engine,
