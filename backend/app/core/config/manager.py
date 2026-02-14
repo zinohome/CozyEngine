@@ -16,6 +16,7 @@ from .schemas import (
     SecurityConfig,
     StorageConfig,
     ToolsConfig,
+    GreyscaleConfig,
 )
 from .settings import Settings
 
@@ -141,6 +142,9 @@ class Config:
 
             # Security configuration
             self.security = SecurityConfig(**yaml_configs.get("security", {}))
+
+            # Greyscale configuration
+            self.greyscale = GreyscaleConfig(**yaml_configs.get("greyscale", {}))
 
         except ValidationError as e:
             raise InvalidConfigurationError(f"Configuration validation failed: {e}") from e

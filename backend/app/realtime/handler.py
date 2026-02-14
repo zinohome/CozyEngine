@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 class RealtimeVoiceHandler:
     """Handles realtime voice interactions."""
 
-    async def handle_stream(self, audio: Tuple[int, np.ndarray]) -> AsyncGenerator[Tuple[int, np.ndarray], None]:
+    async def handle_stream(self, audio: Tuple[int, np.ndarray], request: gr.Request = None) -> AsyncGenerator[Tuple[int, np.ndarray], None]:
         """
         Process audio stream:
         1. STT (Speech to Text)
@@ -29,6 +29,23 @@ class RealtimeVoiceHandler:
         if not audio:
             return
 
+        # Determine User and Session from Request
+        user_id = "realtime-user"
+        session_id = "realtime-session"
+        
+        if request:
+            # Use Gradio session_hash as session_id if available
+            if hasattr(request, "session_hash"):
+                session_id = f"rt-{request.session_hash}"
+            
+            # Use authenticated user if available (e.g. via HF_TOKEN or Basic Auth)
+            if hasattr(request, "username") and request.username:
+                user_id = request.username
+            elif hasattr(request, "headers"):
+                # Fallback to header inspection
+                user_id = request.headers.get("x-user-id", user_id)
+                session_id = request.headers.get("x-session-id", session_id)
+        
         sample_rate, audio_data = audio
         
         # 1. Transcribe (STT)
@@ -64,9 +81,6 @@ class RealtimeVoiceHandler:
             logger.error("Orchestrator not initialized")
             return
 
-        # TODO: Retrieve user/session from context (e.g. headers if supported by FastRTC)
-        user_id = "realtime-user"
-        session_id = "realtime-session"
         personality_id = "cozy-companion-base"
 
         reply_text = ""

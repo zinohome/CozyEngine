@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ============================================================================
@@ -458,3 +458,26 @@ class SecurityConfig(BaseModel):
     audit: SecurityAuditConfig = Field(default_factory=SecurityAuditConfig)
     rate_limiting: RateLimitingConfig = Field(default_factory=RateLimitingConfig)
     api_keys: APIKeysConfig = Field(default_factory=APIKeysConfig)
+
+
+# ============================================================================
+# Greyscale Configuration
+# ============================================================================
+
+
+class FeatureFlag(BaseModel):
+    """Feature flag configuration."""
+    
+    enabled: bool = True
+    percentage: int = Field(default=100, ge=0, le=100)
+    allowlist: list[str] = Field(default_factory=list)
+    blocklist: list[str] = Field(default_factory=list)
+
+
+class GreyscaleConfig(BaseModel):
+    """Greyscale configuration."""
+    
+    default_behavior: bool = True
+    
+    model_config = ConfigDict(extra="allow")
+

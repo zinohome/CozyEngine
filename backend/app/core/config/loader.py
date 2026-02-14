@@ -81,6 +81,7 @@ class YAMLConfigLoader:
             "storage",
             "observability",
             "security",
+            "greyscale",
         ]
 
         config = {}
